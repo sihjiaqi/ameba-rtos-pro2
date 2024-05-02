@@ -1,0 +1,9 @@
+
+/*
+ * Release Note
+ */
+
+	v3.6a_beta_v1
+	1. First release for 8710b.
+	
+	   	

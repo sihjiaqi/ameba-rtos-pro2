@@ -1,0 +1,7 @@
+*.dep
+*.ewt
+*.d
+*.o
+*.su
+libsrc
+*@tmp

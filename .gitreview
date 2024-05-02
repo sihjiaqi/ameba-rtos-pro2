@@ -1,0 +1,6 @@
+[gerrit]
+host=cn3sd9.sdlc.rd.realtek.com
+port=29418
+project=iot/sw/sdk
+defaultbranch=master
+defaultremote=origin

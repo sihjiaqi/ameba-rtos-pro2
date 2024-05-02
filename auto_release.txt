@@ -1,0 +1,213 @@
+;
+; HowTo: Release Driver Package
+;
+; 1. Update document
+; 1.1 Update release.txt and read.txt in project\stmicro_stm32f4xx_freertos_networking_8189em\
+; 1.2 Update mp document, wificonf, interactive command if necessary
+;
+; 2. Branch code from latest trunk to release branch
+; 2.1 Increase sequence number
+;
+; 3. Build wlan mp dirver lib
+; 3.1 Open project project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\Project.eww
+; 3.2 !!!!!Disable all wlan debug message!!!
+;     by open component\common\drivers\wlan\realtek\include\autoconf.h
+;     and mark out #define CONFIG_DEBUG and #define CONFIG_DEBUG_RTL871X
+;     and enable #define CONFIG_MP_INCLUDED
+; 3.3 Rename wlanlib.a to wlanlib_mp.a in 
+;     project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\wlanlib
+; 3.4 Disable #define CONFIG_MP_INCLUDED
+;
+; 4. Build wlan normal driver lib
+; 4.1 Open project project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\Project.eww
+; 4.2 !!!!!Disable all wlan debug message!!!
+;     by open component\common\drivers\wlan\realtek\include\autoconf.h
+;     and mark out #define CONFIG_DEBUG and #define CONFIG_DEBUG_RTL871X
+; 4.3 Disable #define CONFIG_MP_INCLUDED if it is enabled at previous stage
+; 4.4 Build Wlanlib.a. Click tab of WlanLib and Porject->Make
+;
+; 5. Generate Package
+; 5.1 Execute release.bat
+;
+; 6. Test it 
+; 6.1 Test Normal driver mode
+; 6.2 Test MP mode
+;
+; 6. Zip release package
+;
+; 7. Check-in 
+; 7.1 Check-in necessary file including released package.
+
+
+
+;
+; file use f , dir use d
+; "file copy and rename" use fr
+
+; os
+;d component\os\freertos\freertos_v7.4.0
+d component\os\freertos\freertos_v8.0.1
+
+; soc
+d component\soc\stmicro\stm32f10x
+d component\soc\stmicro\stm32f2xx
+d component\soc\stmicro\stm32f4xx
+
+; sdio
+f component\common\drivers\sdio\wifi_io.h
+f component\common\drivers\sdio\core\sdio_irq.h
+f component\common\drivers\sdio\include\card.h
+f component\common\drivers\wlan\realtek\wlan_lib\cortex-m\mdk\Sdiolib.lib
+
+; common
+f component\common\api\at_cmd\atcmd_wifi.c
+f component\common\api\at_cmd\atcmd_wifi.h
+f component\common\api\at_cmd\atcmd_fs_example.c
+f component\common\api\at_cmd\log_service.c
+f component\common\api\at_cmd\log_service.h
+f component\common\api\platform\dlist.h
+f component\common\api\lwip_netconf.c
+f component\common\api\lwip_netconf.h
+f component\common\api\wifi_interactive_mode.c
+f component\common\api\wifi_interactive_ext.h
+f component\common\api\platform\platform_stdlib.h
+f component\common\api\wifi\wifi_conf.c
+f component\common\api\wifi\wifi_conf.h
+f component\common\api\wifi\wifi_ind.c
+f component\common\api\wifi\wifi_ind.h
+f component\common\api\wifi\wifi_util.c
+f component\common\api\wifi\wifi_util.h
+f component\common\api\wifi\wifi_promisc.c
+f component\common\api\wifi\wifi_simple_config.c
+f component\common\api\wifi\rtw_wpa_supplicant\src\utils\os_freertos.c
+f component\common\api\wifi\rtw_wpa_supplicant\src\utils\os.h
+f component\common\api\wifi\rtw_wpa_supplicant\src\utils\rom\rom_wps_os.h
+f component\common\api\wifi\rtw_wpa_supplicant\src\wps\wps_defs.h
+f component\common\api\wifi\rtw_wpa_supplicant\wpa_supplicant\wifi_wps_config.c
+
+d component\common\network
+d component\common\drivers\flash
+f component\common\drivers\wlan\realtek\wlan_lib\cortex-m\iar\WlanLib.a
+f component\common\drivers\wlan\realtek\wlan_lib\cortex-m\iar\WlanLib_mp.a
+f component\common\drivers\wlan\realtek\wlan_lib\cortex-m\mdk\Wlanlib.lib
+f component\common\drivers\wlan\realtek\wlan_lib\cortex-m\mdk\Wlanlib_mp.lib
+f component\common\drivers\wlan\realtek\include\autoconf.h
+f component\common\drivers\wlan\realtek\include\wifi_constants.h
+f component\common\drivers\wlan\realtek\include\wifi_structures.h
+f component\common\drivers\wlan\realtek\include\byteorder\little_endian.h
+f component\common\drivers\wlan\realtek\include\drv_conf.h
+fr component\common\drivers\wlan\realtek\src\osdep\wireless.h component\common\drivers\wlan\realtek\include\wireless.h
+fr component\common\drivers\wlan\realtek\src\osdep\lwip_intf.h component\common\drivers\wlan\realtek\include\lwip_intf.h
+fr component\common\drivers\wlan\realtek\src\osdep\osdep_service.h component\common\drivers\wlan\realtek\include\osdep_service.h
+fr component\common\drivers\wlan\realtek\src\osdep\wlan_intf.h component\common\drivers\wlan\realtek\include\wlan_intf.h
+fr component\common\drivers\wlan\realtek\src\osdep\skbuff.h component\common\drivers\wlan\realtek\include\skbuff.h
+fr component\common\drivers\wlan\realtek\src\osdep\freertos\freertos_service.h component\common\drivers\wlan\realtek\include\freertos\freertos_service.h
+f component\common\drivers\wlan\realtek\src\osdep\lwip_intf.c
+f component\common\drivers\wlan\realtek\src\osdep\freertos\freertos_service.c
+f component\common\test\wlan\wlan_test_inc.h
+f component\common\utilities\ping.c
+f component\common\utilities\tcptest.c
+f component\common\utilities\ttcp.c
+f component\common\utilities\webserver.c
+f component\common\utilities\webserver.h
+f component\common\utilities\ssl_client.c
+f component\common\utilities\udpecho.c
+f component\common\utilities\tcpecho.c
+f component\common\utilities\update.c
+f component\common\utilities\update.h
+
+; doc
+d doc
+
+; release note
+f release_note.txt
+
+; 1xx project
+fr project\stmicro_stm32f10x_freertos_networking_8189em\EWARM-RELEASE\Project_release.eww project\stmicro_stm32f10x_freertos_networking_8189em\EWARM-RELEASE\Project.eww
+f project\stmicro_stm32f10x_freertos_networking_8189em\EWARM-RELEASE\Project.ewp
+f project\stmicro_stm32f10x_freertos_networking_8189em\EWARM-RELEASE\Project.ewd
+f project\stmicro_stm32f10x_freertos_networking_8189em\EWARM-RELEASE\startup_stm32f10x_hd.s
+f project\stmicro_stm32f10x_freertos_networking_8189em\EWARM-RELEASE\stm32f10x_flash.icf
+f project\stmicro_stm32f10x_freertos_networking_8189em\MDK-ARM-RELEASE\Project.uvopt
+f project\stmicro_stm32f10x_freertos_networking_8189em\MDK-ARM-RELEASE\Project.uvproj
+f project\stmicro_stm32f10x_freertos_networking_8189em\MDK-ARM-RELEASE\startup_stm32f10x_hd.s
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\FreeRTOSConfig.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\lwipopts.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\main.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\rtwlan_bsp.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\serial_debug.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\stm32_platform.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\stm32f1xG_spi.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\stm32f10x_conf.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\inc\stm32f10x_it.h
+f project\stmicro_stm32f10x_freertos_networking_8189em\src\main.c
+f project\stmicro_stm32f10x_freertos_networking_8189em\src\post_init.c
+f project\stmicro_stm32f10x_freertos_networking_8189em\src\rtwlan_bsp.c
+f project\stmicro_stm32f10x_freertos_networking_8189em\src\serial_debug.c
+f project\stmicro_stm32f10x_freertos_networking_8189em\src\rtwlan_spi_loopback.c
+f project\stmicro_stm32f10x_freertos_networking_8189em\src\stm32f1xG_spi.c
+f project\stmicro_stm32f10x_freertos_networking_8189em\src\stm32f10x_it.c
+
+; 2xx project
+fr project\stmicro_stm32f2xx_freertos_networking_8189em\EWARM-RELEASE\Project_release.eww project\stmicro_stm32f2xx_freertos_networking_8189em\EWARM-RELEASE\Project.eww
+f project\stmicro_stm32f2xx_freertos_networking_8189em\EWARM-RELEASE\Project.ewp
+f project\stmicro_stm32f2xx_freertos_networking_8189em\EWARM-RELEASE\Project.ewd
+f project\stmicro_stm32f2xx_freertos_networking_8189em\EWARM-RELEASE\startup_stm32f2xx_freertos.s
+f project\stmicro_stm32f2xx_freertos_networking_8189em\EWARM-RELEASE\stm32f2xx_flash_extram.icf
+f project\stmicro_stm32f2xx_freertos_networking_8189em\MDK-ARM-RELEASE\Project.uvopt
+f project\stmicro_stm32f2xx_freertos_networking_8189em\MDK-ARM-RELEASE\Project.uvproj
+f project\stmicro_stm32f2xx_freertos_networking_8189em\MDK-ARM-RELEASE\startup_stm32f2xx.s
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\FreeRTOSConfig.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\lwipopts.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\main.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\rtwlan_bsp.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\serial_debug.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\stm32_platform.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\stm32f2x7_eth_bsp.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\stm32f2x7_eth_conf.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\stm32f2x7_spi.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\stm32f2xx_conf.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\inc\stm32f2xx_it.h
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\main.c
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\rtwlan_bsp.c
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\serial_debug.c
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\stm32f2x7_eth_bsp.c
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\stm32f2x7_spi.c
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\stm32f2xx_it.c
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\stm32f2x7_tim.c
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\post_init.c
+f project\stmicro_stm32f2xx_freertos_networking_8189em\src\system_stm32f2xx.c
+
+; 4xx project
+fr project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\Project_release.eww project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\Project.eww
+f project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\Project.ewp
+f project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\Project.ewd
+f project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\startup_stm32f4xx_freertos.s
+f project\stmicro_stm32f4xx_freertos_networking_8189em\EWARM-RELEASE\stm32f4xx_flash.icf
+f project\stmicro_stm32f4xx_freertos_networking_8189em\MDK-ARM-RELEASE\Project.uvopt
+f project\stmicro_stm32f4xx_freertos_networking_8189em\MDK-ARM-RELEASE\Project.uvproj
+f project\stmicro_stm32f4xx_freertos_networking_8189em\MDK-ARM-RELEASE\startup_stm32f4xx.s
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\FreeRTOSConfig.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\lwipopts.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\main.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\rtwlan_bsp.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\serial_debug.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\stm32_platform.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\stm32f4x7_eth_bsp.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\stm32f4x7_eth_conf.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\stm32f4x7_spi.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\stm32f4xx_conf.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\inc\stm32f4xx_it.h
+f project\stmicro_stm32f4xx_freertos_networking_8189em\src\main.c
+f project\stmicro_stm32f4xx_freertos_networking_8189em\src\rtwlan_bsp.c
+f project\stmicro_stm32f4xx_freertos_networking_8189em\src\serial_debug.c
+f project\stmicro_stm32f4xx_freertos_networking_8189em\src\stm32f4x7_eth_bsp.c
+f project\stmicro_stm32f4xx_freertos_networking_8189em\src\stm32f4x7_spi.c
+f project\stmicro_stm32f4xx_freertos_networking_8189em\src\stm32f4xx_it.c
+f project\stmicro_stm32f4xx_freertos_networking_8189em\src\stm32f4x7_tim.c
+f project\stmicro_stm32f4xx_freertos_networking_8189em\src\post_init.c
+
+; tools
+f tools\PCATTCP.exe
+d tools\simple_config
+

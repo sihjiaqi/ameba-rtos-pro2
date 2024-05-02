@@ -1,0 +1,22 @@
+[submodule "doc"]
+	path = doc
+	url = ssh://cn3sd9.sdlc.rd.realtek.com:29418/iot/sw/doc
+[submodule "tools"]
+	path = tools
+	url = ssh://cn3sd9.sdlc.rd.realtek.com:29418/iot/sw/tools
+[submodule "project/realtek_8195b_gen_project/rtl8195b"]
+	path = project/realtek_8195b_gen_project/rtl8195b
+	url = ssh://cn3wd1.sdlc.rd.realtek.com:29418/ameba_pro/ameba_pro_sdk_comm
+	branch = master
+[submodule "project/realtek_8710c_gen_project/rtl8710c"]
+	path = project/realtek_8710c_gen_project/rtl8710c
+	url = ssh://cn3wd1.sdlc.rd.realtek.com:29418/ameba_zii_sdk_comm
+[submodule "project/realtek_gen_project/mbed"]
+	path = project/realtek_gen_project/mbed
+	url = ssh://cn3sd9.sdlc.rd.realtek.com:29418/iot/mbed_api/v01
+[submodule "project/realtek_8735b_gen_project/rtl8735b"]
+	path = project/realtek_8735b_gen_project/rtl8735b
+	url = ssh://alfa.chou@cn3wd1.sdlc.rd.realtek.com:29418/ameba_pro2_sdk
+[submodule "component/application/audio_afe"]
+	path = component/application/audio_afe
+	url = ssh://rswn.sdlc.rd.realtek.com:29418/protected/wn_iot_audio/afe

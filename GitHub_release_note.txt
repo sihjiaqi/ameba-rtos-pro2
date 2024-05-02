@@ -1,0 +1,5 @@
+
+GitHub Update Note, sync with 9.6_r
+
+SHA-1: 1800a37a0d3d516013bf837df21f4fe8f5125b84
+* [amebapro2][wlan] avoid wifi_off crash issue
