@@ -29,7 +29,7 @@
 #define I2S_WS_PIN      PE_3
 #define I2S_TX_PIN      PE_1
 #define I2S_RX_PIN      PE_4
-#define I2S_MCK_PIN     NC //PE_2 or NC
+#define I2S_MCK_PIN     PE_2 // or NC
 #define I2S_TX1_PIN     NC
 #define I2S_TX2_PIN     NC
 #else
@@ -38,13 +38,13 @@
 #define I2S_WS_PIN0     PD_17
 #define I2S_TX_PIN0     PD_15
 #define I2S_RX_PIN0     PD_18
-#define I2S_MCK_PIN0    NC //PD_16 or NC
+#define I2S_MCK_PIN0    PD_16 // or NC
 //Group pin 1
 #define I2S_SCLK_PIN1   PF_13
 #define I2S_WS_PIN1     PF_15
 #define I2S_TX_PIN1     PF_14
 #define I2S_RX_PIN1     PF_12
-#define I2S_MCK_PIN1    NC //PF_11 or NC
+#define I2S_MCK_PIN1    PF_11 // or NC
 #endif
 
 //Group pin 0
@@ -374,6 +374,8 @@ static int set_i2s_module_init(void *p)
 		ctx->tx_channel = ctx->params.tx_channel;
 		ctx->i2s_direction = ctx->params.i2s_direction;
 		ctx->pin_group_num = ctx->params.pin_group_num;
+		ctx->i2s_ws_edge = ctx->params.i2s_ws_edge;
+		ctx->i2s_data_edge = ctx->params.i2s_data_edge;
 		//I2S with word length only support stereo channel
 		if (ctx->i2s_word_length == 24 || ctx->rx_channel == I2S_STEREO_CHANNEL || ctx->tx_channel == I2S_STEREO_CHANNEL) {
 			ctx->i2s_channel = CH_STEREO;
@@ -410,9 +412,20 @@ static int set_i2s_module_init(void *p)
 			//} else if (ctx->tx_channel == I2S_RIGHT_CHANNEL) {
 			//i2s_set_ws_swap(ctx->i2s_obj, 1);
 			//}
+			i2s_set_format(ctx->i2s_obj, ctx->params.i2s_format);
+			i2s_set_master(ctx->i2s_obj, ctx->params.i2s_role);
+			//i2s_set_byte_swap(ctx->i2s_obj, 1);
+			// Since the sck is inverted, we need to inverted the trigger for the setting
+			if (ctx->i2s_ws_edge == WS_NEGATIVE_EDGE) {
+				i2s_set_sck_inv(ctx->i2s_obj, 0);
+				i2s_set_data_start_edge(ctx->i2s_obj, ctx->i2s_data_edge);
+			} else {
+				i2s_set_sck_inv(ctx->i2s_obj, 1);
+				i2s_set_data_start_edge(ctx->i2s_obj, !ctx->i2s_data_edge);
+			}
 			i2s_set_param(ctx->i2s_obj, ctx->i2s_channel, i2s_samplerate2index(ctx->sample_rate), i2s_wordlength2index(ctx->i2s_word_length));
-			i2s_set_byte_swap(ctx->i2s_obj, 0);//i2s_set_byte_swap(ctx->i2s_obj, 1);//
-			//since the TX only support loop back mode in driver, blocking the RX in TX RX mode to implement TX only mode
+
+			// Since the TX only support loop back mode in driver, blocking the RX in TX RX mode to implement TX only mode
 			if (ctx->i2s_direction == I2S_RX_ONLY) {
 				i2s_set_direction(ctx->i2s_obj, I2S_DIR_RX);
 			} else {
@@ -463,16 +476,78 @@ int i2s_control(void *p, int cmd, int arg)
 		ctx->params.sample_rate = arg;
 		break;
 	case CMD_I2S_SET_TRX:
-		memcpy((void *)arg, &ctx->params, sizeof(i2s_params_t));
+		if (arg == 0) {
+			i2s_disable(ctx->i2s_obj);
+		} else {
+			ctx->i2s_direction = I2S_TRX_BOTH;
+			ctx->params.i2s_direction = I2S_TRX_BOTH;
+			i2s_set_direction(ctx->i2s_obj, I2S_DIR_TXRX);
+		}
 		break;
 	case CMD_I2S_SET_RX:
-		memcpy((void *)arg, &ctx->params, sizeof(i2s_params_t));
+		if (arg == 0) {
+			if (ctx->i2s_direction == I2S_RX_ONLY) {
+				i2s_disable(ctx->i2s_obj);
+			} else {
+				ctx->i2s_direction = I2S_TX_ONLY;
+				ctx->params.i2s_direction = I2S_TX_ONLY;
+				i2s_set_direction(ctx->i2s_obj, I2S_DIR_TXRX);
+			}
+		} else {
+			if (ctx->i2s_direction == I2S_TX_ONLY) {
+				ctx->i2s_direction = I2S_TRX_BOTH;
+				ctx->params.i2s_direction = I2S_TRX_BOTH;
+				i2s_set_direction(ctx->i2s_obj, I2S_DIR_TXRX);
+			}
+		}
 		break;
 	case CMD_I2S_SET_TX:
-		memcpy((void *)arg, &ctx->params, sizeof(i2s_params_t));
+		if (arg == 0) {
+			if (ctx->i2s_direction == I2S_TX_ONLY) {
+				i2s_disable(ctx->i2s_obj);
+			} else {
+				ctx->i2s_direction = I2S_RX_ONLY;
+				ctx->params.i2s_direction = I2S_RX_ONLY;
+				i2s_set_direction(ctx->i2s_obj, I2S_DIR_RX);
+			}
+		} else {
+			if (ctx->i2s_direction == I2S_RX_ONLY) {
+				ctx->i2s_direction = I2S_TRX_BOTH;
+				ctx->params.i2s_direction = I2S_TRX_BOTH;
+				i2s_set_direction(ctx->i2s_obj, I2S_DIR_TXRX);
+			}
+		}
 		break;
 	case CMD_I2S_SET_TIMESTAMP_OFFSET:
 		ctx->i2s_timestamp_offset = arg;
+		break;
+	case CMD_I2S_SET_FORMAT:
+		ctx->params.i2s_format = arg;
+		i2s_set_format(ctx->i2s_obj, ctx->params.i2s_format);
+		break;
+	case CMD_I2S_SET_ROLE:
+		ctx->params.i2s_role = arg;
+		i2s_set_master(ctx->i2s_obj, ctx->params.i2s_role);
+		break;
+	case CMD_I2S_SET_DATA_EDGE:
+		ctx->params.i2s_data_edge = arg;
+		ctx->i2s_data_edge = ctx->params.i2s_data_edge;
+		if (ctx->i2s_ws_edge == WS_NEGATIVE_EDGE) {
+			i2s_set_data_start_edge(ctx->i2s_obj, ctx->i2s_data_edge);
+		} else {
+			i2s_set_data_start_edge(ctx->i2s_obj, !ctx->i2s_data_edge);
+		}
+		break;
+	case CMD_I2S_SET_WS_EDGE:
+		ctx->params.i2s_ws_edge = arg;
+		ctx->i2s_ws_edge = ctx->params.i2s_ws_edge;
+		if (ctx->i2s_ws_edge == WS_NEGATIVE_EDGE) {
+			i2s_set_sck_inv(ctx->i2s_obj, 0);
+			i2s_set_data_start_edge(ctx->i2s_obj, ctx->i2s_data_edge);
+		} else {
+			i2s_set_sck_inv(ctx->i2s_obj, 1);
+			i2s_set_data_start_edge(ctx->i2s_obj, !ctx->i2s_data_edge);
+		}
 		break;
 	case CMD_I2S_FORCE_DEINIT:
 		set_i2s_module_deinit(ctx);
@@ -719,7 +794,7 @@ mm_module_t i2s_module = {
 	.del_item = i2s_del_item,
 	.rsz_item = NULL,
 
-	.output_type = MM_TYPE_ADSP | MM_TYPE_ASINK,     // no output
+	.output_type = MM_TYPE_ADSP | MM_TYPE_ASINK,
 	.module_type = MM_TYPE_ASRC | MM_TYPE_ASINK,
 	.name = "I2S"
 };
@@ -729,8 +804,14 @@ i2s_params_t default_i2s_params = {
 	.i2s_word_length    = 16,
 	.rx_word_length     = 16,
 	.tx_word_length     = 16,
+	.i2s_format         = FORMAT_I2S,
+	.i2s_role           = I2S_MASTER,
+	.i2s_data_edge      = NEGATIVE_EDGE,
+	.i2s_ws_edge        = WS_NEGATIVE_EDGE,
 	.rx_channel         = I2S_LEFT_CHANNEL,
 	.tx_channel         = I2S_LEFT_CHANNEL,
 	.i2s_direction      = I2S_TRX_BOTH,
+	.rx_byte_swap       = 0,
+	.tx_byte_swap       = 0,
 	.pin_group_num      = 1,
 };

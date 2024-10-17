@@ -17,7 +17,7 @@
 #include "module_array.h"
 #include "sample_doorbell_pcmu.h"
 #include "mmf2_pro2_video_config.h"
-#include "example_doorbell_chime.h"
+#include "doorbell_chime.h"
 #include "log_service.h"
 #include "doorbell_demo.h"
 
@@ -86,15 +86,15 @@ static audio_params_t audio_params = {
 	.word_length = WL_16BIT,
 	.mic_gain    = MIC_40DB,
 	.channel     = 1,
-	.enable_aec  = 1
 };
 
 static aac_params_t aac_params = {
 	.sample_rate = 8000,
 	.channel = 1,
-	.bit_length = FAAC_INPUT_16BIT,
-	.output_format = 1,
-	.mpeg_version = MPEG4,
+	.trans_type = AAC_TYPE_ADTS,
+	.object_type = AAC_AOT_LC,
+	.bitrate = 32000,
+
 	.mem_total_size = 10 * 1024,
 	.mem_block_size = 128,
 	.mem_frame_size = 1024
@@ -373,7 +373,7 @@ mmf2_video_exmaple_av_fail:
 	return;
 }
 
-void example_doorbell_chime_main(void *param)
+void doorbell_chime_main(void *param)
 {
 
 	wifi_common_init();
@@ -420,11 +420,11 @@ log_item_t at_p2p_items[ ] = {
 	{"ATUD", fATUID,},
 };
 
-void example_doorbell_chime(void)
+void doorbell_chime_initialize(void)
 {
 	log_service_add_table(at_p2p_items, sizeof(at_p2p_items) / sizeof(at_p2p_items[0]));
 	/*user can start their own task here*/
-	if (xTaskCreate(example_doorbell_chime_main, ((const char *)"doorbell-chime"), 4096, NULL, tskIDLE_PRIORITY + 2, NULL) != pdPASS) {
-		printf("\r\n example_doorbell_chime_main: Create Task Error\n");
+	if (xTaskCreate(doorbell_chime_main, ((const char *)"doorbell-chime"), 4096, NULL, tskIDLE_PRIORITY + 2, NULL) != pdPASS) {
+		printf("\r\n doorbell_chime_main: Create Task Error\n");
 	}
 }

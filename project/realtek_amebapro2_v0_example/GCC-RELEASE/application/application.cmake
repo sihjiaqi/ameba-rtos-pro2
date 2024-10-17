@@ -19,7 +19,6 @@ else()
 endif()
 include(./libwlan.cmake OPTIONAL)
 include(./libwps.cmake OPTIONAL)
-include(./libeap.cmake OPTIONAL)
 if(BUILD_TZ)
 	include(./libvideo_ns.cmake OPTIONAL)
 else()
@@ -50,6 +49,7 @@ include(./libfmp4.cmake OPTIONAL)
 include(./libispfeature.cmake OPTIONAL)
 include(./libmd.cmake OPTIONAL)
 include(./libfaultlog.cmake OPTIONAL)
+include(./libeap.cmake OPTIONAL)
 
 if(BUILD_LIB)
 	message(STATUS "build libraries")
@@ -273,13 +273,13 @@ list(
 	${sdk_root}/component/wifi/wifi_fast_connect/wifi_fast_connect.c
 	#wpa_supplicant
 	${sdk_root}/component/wifi/wpa_supplicant/wpa_supplicant/wifi_wps_config.c
-	#option
-	${sdk_root}/component/wifi/driver/src/core/option/rtw_opt_crypto_ssl.c
-	${sdk_root}/component/wifi/driver/src/core/option/rtw_opt_skbuf_rtl8735b.c
 	#wpa_supplicant
 	${sdk_root}/component/wifi/wpa_supplicant/src/crypto/tls_polarssl.c		
 	#wpa_supplicant
 	${sdk_root}/component/wifi/wpa_supplicant/wpa_supplicant/wifi_eap_config.c	
+	#option
+	${sdk_root}/component/wifi/driver/src/core/option/rtw_opt_crypto_ssl.c
+	${sdk_root}/component/wifi/driver/src/core/option/rtw_opt_skbuf_rtl8735b.c
 )
 
 #ethernet
@@ -523,7 +523,6 @@ list(
 #USER
 list(
     APPEND app_sources
-	${prj_root}/src/main.c
 	${sdk_root}/component/soc/8735b/misc/driver/mpu_protect.c	
 )
 
@@ -663,46 +662,12 @@ list(
 	${sdk_root}/component/bluetooth/rtk_stack/example/bt_config/bt_config_wifi.c
 )
 
-#NN MODEL
-list(
-	APPEND app_sources
-	${prj_root}/src/test_model/model_yolo.c
-	${prj_root}/src/test_model/model_yamnet.c
-	${prj_root}/src/test_model/model_yamnet_s.c
-	${prj_root}/src/test_model/model_landmark_sim.c
-	${prj_root}/src/test_model/model_mobilefacenet.c
-	${prj_root}/src/test_model/model_scrfd.c
-	${prj_root}/src/test_model/model_nanodet.c
-	${prj_root}/src/test_model/mel_spectrogram.c
-)
-#NN utils
-list(
-	APPEND app_sources
-	${prj_root}/src/test_model/nn_utils/sigmoid.c
-	${prj_root}/src/test_model/nn_utils/quantize.c
-	${prj_root}/src/test_model/nn_utils/iou.c
-	${prj_root}/src/test_model/nn_utils/nms.c
-	${prj_root}/src/test_model/nn_utils/tensor.c
-	${prj_root}/src/test_model/nn_utils/class_name.c
-
-	${prj_root}/src/test_model/roi_delta_qp/roi_delta_qp.c
-)
 #NN module
 list(
 	APPEND app_sources
 
 	${sdk_root}/component/media/mmfv2/module_vipnn.c
 	${sdk_root}/component/media/mmfv2/module_facerecog.c
-)
-
-#SVM
-list(
-	APPEND app_sources
-	${prj_root}/src/test_model/svm/svm.cpp
-	#sim_io
-	${prj_root}/src/test_model/svm/sim_io/sim_io.c
-	#FastLZ
-	${prj_root}/src/test_model/svm/fastlz/fastlz.c
 )
 
 if(PICOLIBC)
@@ -713,60 +678,24 @@ list(
 )
 endif()
 
-if(DEFINED EXAMPLE AND EXAMPLE)
-    message(STATUS "EXAMPLE = ${EXAMPLE}")
-    if(EXISTS ${sdk_root}/component/example/${EXAMPLE})
-		if(EXISTS ${sdk_root}/component/example/${EXAMPLE}/${EXAMPLE}.cmake)
-			message(STATUS "Found ${EXAMPLE} include project")
-			include(${sdk_root}/component/example/${EXAMPLE}/${EXAMPLE}.cmake)
-		else()
-			message(WARNING "Found ${EXAMPLE} include project but ${EXAMPLE}.cmake not exist")
-		endif()
+if(DEFINED SCENARIO AND SCENARIO AND NOT "${SCENARIO}" STREQUAL "standard")
+    message(STATUS "SCENARIO = ${SCENARIO}")
+    if(EXISTS ${prj_root}/scenario/${SCENARIO})
+        if(EXISTS ${prj_root}/scenario/${SCENARIO}/scenario.cmake)
+            message(STATUS "Found SCENARIO ${SCENARIO} and start to build up ${SCENARIO} project")
+            include(${prj_root}/scenario/${SCENARIO}/scenario.cmake)
+    endif()
     else()
-        message(WARNING "${EXAMPLE} Not Found")
-    endif()
-    if(NOT DEBUG)
-        set(EXAMPLE OFF CACHE STRING INTERNAL FORCE)
-    endif()
-elseif(DEFINED VIDEO_EXAMPLE AND VIDEO_EXAMPLE)
-    message(STATUS "Build VIDEO_EXAMPLE project")
-    include(${prj_root}/src/mmfv2_video_example/video_example_media_framework.cmake)
-    if(NOT DEBUG)
-         set(VIDEO_EXAMPLE OFF CACHE STRING INTERNAL FORCE)
-    endif()
-elseif(DEFINED SELF_TEST AND SELF_TEST)
-	message(STATUS "SELF_TEST = ${SELF_TEST}")
-    include(${prj_root}/src/self_test/${SELF_TEST}/${SELF_TEST}.cmake)
-    if(NOT DEBUG)
-        set(SELF_TEST OFF CACHE STRING INTERNAL FORCE)
-    endif()
-elseif(DEFINED DOORBELL_CHIME AND DOORBELL_CHIME)
-    message(STATUS "Build DOORBELL_CHIME project")
-    include(${prj_root}/src/doorbell-chime/doorbell-chime.cmake)
-    if(NOT DEBUG)
-        set(DOORBELL_CHIME OFF CACHE STRING INTERNAL FORCE)
-    endif()
-elseif(DEFINED AUDIO_TEST_TOOL AND AUDIO_TEST_TOOL)
-    message(STATUS "Build AUDIO_TEST_TOOL project")
-	include(${prj_root}/src/internal/audio_test_tool/audio_test_tool.cmake OPTIONAL RESULT_VARIABLE audio_test_internal)
-    if (audio_test_internal)
-        message(STATUS "Internal Test Version")
-    else()
-        include(${prj_root}/src/audio_test_tool/audio_test_tool.cmake OPTIONAL RESULT_VARIABLE audio_test_release)
-        if (NOT audio_test_release)
-            message(STATUS "Audio Test Tool Not Release")
+        message(ERROR SCENARIO "${SCENARIO} Not Found")
         endif()
-    endif()
-    if(NOT DEBUG)
-        set(AUDIO_TEST_TOOL OFF CACHE STRING INTERNAL FORCE)
-    endif()
-elseif(DEFINED NN_TESTER_EXAMPLE AND NN_TESTER_EXAMPLE)
-	message(STATUS "Build NN_TESTER_EXAMPLE project")
-	include(${prj_root}/src/internal/nn_tester/example_file_vipnn_tester.cmake)
 	if(NOT DEBUG)
-		set(NN_TESTER_EXAMPLE OFF CACHE STRING INTERNAL FORCE)
+        set(SCENARIO OFF CACHE STRING INTERNAL FORCE)
 	endif()
 else()
+#If users do not choose the scenario, the SDK will use the standard scenario, which means using sdk original src folder
+#Todo: maybe some libraries and source files for applcaition also not need to include in every scenario
+    message(STATUS "Set SCENARIO standard and start to build up standard project")
+    include(${prj_root}/scenario.cmake)
 endif()
 
 if(CONSOLE STREQUAL "RTT")
@@ -789,7 +718,7 @@ if(BUILD_TZ)
 	add_executable(
 		${app}
 		${app_sources}
-		${app_example_sources}
+		${scn_sources}
 		$<TARGET_OBJECTS:outsrc>
 		$<TARGET_OBJECTS:secure_object>
 	)
@@ -802,7 +731,7 @@ else()
 	add_executable(
 		${app}
 		${app_sources}
-		${app_example_sources}
+		${scn_sources}
 		$<TARGET_OBJECTS:outsrc>
 	)
 
@@ -820,7 +749,7 @@ endif()
 
 list(
 	APPEND app_flags
-	${app_example_flags}
+	${scn_flags}
 	CONFIG_BUILD_RAM=1 
 	CONFIG_PLATFORM_8735B
 	CONFIG_RTL8735B_PLATFORM=1
@@ -859,15 +788,12 @@ list(
 	APPEND app_inc_path
 	
 	${inc_path}
-	${app_example_inc_path}
 	${sdk_root}/component/os/freertos/${freertos}/Source/portable/GCC/ARM_CM33/non_secure
 	${sdk_root}/component/os/freertos/${freertos}/Source/portable/GCC/ARM_CM33/secure
 	${sdk_root}/component/soc/8735b/fwlib/rtl8735b/lib/source/ram/video/voe_bin
 	${sdk_root}/component/video/driver/RTL8735B
 	
-	${prj_root}/src/test_model/svm
-	${prj_root}/src/test_model
-	${prj_root}/src
+    ${scn_inc_path}
 	
 	${sdk_root}/component/soc/8735b/fwlib/rtl8735b/lib/source/ram/nn
 	${sdk_root}/component/soc/8735b/fwlib/rtl8735b/lib/source/ram/nn/model_itp
@@ -929,14 +855,7 @@ list(
 	${sdk_root}/component/network/tftp
 	${sdk_root}/component/network/ftp
 
-	${prj_root}/src/${viplite}/sdk/inc
-	${prj_root}/src/${viplite}/driver/inc
-	${prj_root}/src/${viplite}/hal/inc
-	${prj_root}/src/${viplite}/hal/user
-	${prj_root}/src/${viplite}/hal/user/freeRTOS
-
 	${sdk_root}/component/example/media_framework/inc
-	${prj_root}/src/doorbell-chime
 	${sdk_root}/component/wifi/wpa_supplicant/src
 	${sdk_root}/component/wifi/driver/src/core/option
 	${sdk_root}/component/ssl/ssl_ram_map/rom
@@ -944,8 +863,8 @@ list(
 	${prj_root}/component/file_system/fatfs/r0.14
 	${sdk_root}/component/soc/8735b/fwlib/rtl8735b/lib/source/ram/video/osd
 	${sdk_root}/component/video/osd2
-	${sdk_root}/component/video/md
 	${sdk_root}/component/video/eip
+	${sdk_root}/component/video/md
 	${sdk_root}/component/wifi/wifi_config
 	
 	${sdk_root}/component/media/framework
@@ -983,34 +902,27 @@ target_link_libraries(
 endif()
 
 if(BUILD_NEWAEC)
-list(
-	APPEND aec_lib
-    ctaec
-    ${sdk_root}/component/audio/3rdparty/AEC/CTAEC/libVQE.a
-)
+	set( aeclib ctaec)
+	set( aeclib_ex ${sdk_root}/component/audio/3rdparty/AEC/CTAEC/libVQE.a)
+
 else()
-list(
-	APPEND aec_lib
-    aec
-)
+	set( aeclib aec)
+	unset( aeclib_ex )
 endif()
 
-target_link_libraries(
-	${app}
+list(
+	APPEND libs
 	${wlanlib}
-	${app_example_lib}
 	wps
-	eap
 	opusenc
 	opusfile
 	opus
 	hmp3
 	g711
 	http
- 	${aec_lib}
+ 	${aeclib}
 	${videolib}
 	mmf
-	bt_upperstack_lib
 	sdcard
 	faac
 	haac
@@ -1023,8 +935,26 @@ target_link_libraries(
 	libface
 	ispfeature
 	md
+	eap	
 	faultlog
 	${soclib}
+)
+
+list(
+	APPEND out_libs 
+	${aeclib_ex}
+	bt_upperstack_lib
+)
+
+
+target_link_libraries(
+	${app}
+	#${wlanlib}
+	${scn_libs}
+	
+	${libs}
+	${out_libs}
+	
     stdc++
 	m
 	c
@@ -1096,6 +1026,7 @@ target_link_options(
 	"LINKER:SHELL:-wrap,hal_sys_cust_pws_val_ctrl"
 	"LINKER:SHELL:-wrap,hal_32k_s1_sel"
 	"LINKER:SHELL:-wrap,hal_xtal_divider_enable"	
+	
 )
 endif()
 

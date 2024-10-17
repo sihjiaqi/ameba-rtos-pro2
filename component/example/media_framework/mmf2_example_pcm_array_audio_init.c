@@ -20,16 +20,7 @@ static mm_context_t *audio_ctx      = NULL;
 static audio_params_t audio_params;
 #elif AUDIO_SRC==I2S_INTERFACE
 static mm_context_t *i2s_ctx        = NULL;
-static i2s_params_t i2s_params = {
-	.sample_rate        = SR_16KHZ,
-	.i2s_word_length    = 16,
-	.rx_word_length     = 16,
-	.tx_word_length     = 16,
-	.rx_channel         = I2S_LEFT_CHANNEL,
-	.tx_channel         = I2S_LEFT_CHANNEL,
-	.i2s_direction      = I2S_TX_ONLY,
-	.pin_group_num      = 1,
-};
+static i2s_params_t i2s_params;
 #else
 #error "please set correct AUDIO_SRC"
 #endif
@@ -93,6 +84,9 @@ void mmf2_example_pcm_array_audio_init(void)
 	//since the i2s module is only a sink in this example, the output queue is not needed in this example
 	i2s_ctx = mm_module_open(&i2s_module);
 	if (i2s_ctx) {
+		mm_module_ctrl(i2s_ctx, CMD_I2S_GET_PARAMS, (int)&i2s_params);
+		i2s_params.sample_rate = SR_16KHZ;
+		i2s_params.i2s_direction = I2S_TX_ONLY;
 		mm_module_ctrl(i2s_ctx, CMD_I2S_SET_PARAMS, (int)&i2s_params);
 		mm_module_ctrl(i2s_ctx, CMD_I2S_APPLY, 0);
 	} else {

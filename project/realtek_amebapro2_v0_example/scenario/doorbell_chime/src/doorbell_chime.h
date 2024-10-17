@@ -3,6 +3,6 @@
 
 #include "platform_opts.h"
 
-void example_doorbell_chime(void);
+void doorbell_chime_initialize(void);
 
 #endif /* _DOORBELL_CHIME_EXAMPLE_H */
