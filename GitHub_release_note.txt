@@ -1,6 +1,8 @@
 
 GitHub Update Note, sync with 9.6_r
 
+SHA-1: ccd2b17cbee9a5faa0004f138139c123463a8904
+* [amebapro2][video] update sensor driver & video related default setting
 
 SHA-1: de335da71c69cb58e8484e3a20ae650b5b152647
 * [amebapro2][sdk] add sceranio setting for sdk

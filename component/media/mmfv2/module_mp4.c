@@ -69,7 +69,7 @@ int mp4_control(void *p, int cmd, int arg)
 		mp4_muxer->type = ctx->params.record_type;
 		mp4_muxer->file_total = ctx->params.record_file_num;
 		memset(mp4_muxer->filename, 0, sizeof(mp4_muxer->filename));
-		strncpy(mp4_muxer->filename, ctx->params.record_file_name, sizeof(mp4_muxer->filename));
+		strncpy(mp4_muxer->filename, ctx->params.record_file_name, sizeof(mp4_muxer->filename) - 1);
 		mp4_muxer->fatfs_buf_size = ctx->params.fatfs_buf_size;
 		mp4_muxer->mp4_user_callback = ctx->params.mp4_user_callback;
 		mp4_muxer->audio_format = ctx->params.mp4_audio_format;
@@ -136,6 +136,9 @@ int mp4_control(void *p, int cmd, int arg)
 		break;
 	case CMD_MP4_STOP:
 		mp4_stop_record(mp4_muxer);
+		break;
+	case CMD_MP4_STOP_IMMEDIATELY:
+		mp4_stop_record_immediately(mp4_muxer);
 		break;
 	case CMD_MP4_GET_STATUS: {
 		int *status = (int *)arg;

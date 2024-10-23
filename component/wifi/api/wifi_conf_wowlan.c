@@ -863,6 +863,16 @@ int wifi_wowlan_set_bcn_track(u8  start_window,
 #endif
 
 #ifdef CONFIG_WOWLAN_PNO
+extern void rtw_set_pno_scan_ssid(u8 *ssid,
+								  u8   ssid_len);
+int wifi_wowlan_set_pno_scan_ssid(u8 *ssid,
+								  u8   ssid_len)
+{
+	int ret = 0;
+	rtw_set_pno_scan_ssid(ssid, ssid_len);
+	return ret;
+}
+
 extern void rtw_set_pno_scan(u8  start_window,
 							 u8  max_window,
 							 u8  increment_steps,

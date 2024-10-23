@@ -244,6 +244,9 @@ static void audio_tx_complete(uint32_t arg, uint8_t *pbuf)
 			RCV_AGC_process(AUDIO_DMA_PAGE_SIZE / sizeof(int16_t), (int16_t *)(ptx_buf));
 		}
 	}
+	if (ctx->txcfg.post_mute) {
+		memset((void *) ptx_buf, 0, AUDIO_DMA_PAGE_SIZE);
+	}
 #endif
 
 #if defined(SAVE_AUDIO_DATA) && SAVE_AUDIO_DATA
@@ -603,7 +606,7 @@ static void audio_rx_asp_init(void *p, int sampleRate)
 		}
 		VQE_SND_init(FRAMESIZE, sampleRate, &(ctx->rxcfg.aec_cfg), &(ctx->rxcfg.agc_cfg), &(ctx->rxcfg.ns_cfg), &(ctx->rxcfg.bf_cfg), NULL, NULL, 1.0f, mic_num);
 		VQE_SND_set_AEC_runtime_en(ctx->run_aec);
-		VQE_SND_set_AGC_runtime_en(ctx->run_agc & AUDIO_RX_MASK);
+		VQE_SND_set_AGC_runtime_en((ctx->run_agc & AUDIO_RX_MASK) ? ctx->rxcfg.agc_cfg.AGC_EN : 0);
 		VQE_SND_set_NS_level(((ctx->run_ns & AUDIO_RX_MASK) ? ctx->rxcfg.ns_cfg.NSLevel : 0), &(ctx->rxcfg.ns_cfg));
 		ctx->inited_rxasp = 1;
 		ctx->run_rxasp = 1;
@@ -886,6 +889,9 @@ static void audio_rx_handle_thread(void *param)
 #endif
 			{
 				memcpy((int16_t *)output_item->data_addr, (int16_t *)(dma_rxdata_proc_buf), AUDIO_DMA_PAGE_SIZE);
+			}
+			if (ctx->rxcfg.post_mute) {
+				memset((void *) output_item->data_addr, 0, AUDIO_DMA_PAGE_SIZE);
 			}
 			if (ctx->mic_record_file) {
 				ctx->mic_record_file((int16_t *)(proc_pretx_buf), (int16_t *)(proc_tx_buf), (int16_t *)(dma_rxdata_proc_buf),
@@ -1295,10 +1301,10 @@ int audio_control(void *p, int cmd, int arg)
 		ctx->run_agc = arg;
 #if defined(CONFIG_NEWAEC) && CONFIG_NEWAEC
 		if (ctx->inited_rxasp) {
-			VQE_SND_set_AGC_runtime_en(ctx->run_agc & AUDIO_RX_MASK);
+			VQE_SND_set_AGC_runtime_en((ctx->run_agc & AUDIO_RX_MASK) ? ctx->rxcfg.agc_cfg.AGC_EN : 0);
 		}
 		if (ctx->inited_agc & AUDIO_TX_MASK) {
-			VQE_RCV_set_AGC_runtime_en(ctx->run_agc & AUDIO_TX_MASK);
+			VQE_RCV_set_AGC_runtime_en((ctx->run_agc & AUDIO_TX_MASK) ? ctx->txcfg.agc_cfg.AGC_EN : 0);
 		}
 #endif
 		break;
@@ -1377,6 +1383,12 @@ int audio_control(void *p, int cmd, int arg)
 		break;
 	case CMD_AUDIO_SET_TXASP_PARAM:
 		memcpy((void *) & (ctx->txcfg), (void *) arg, sizeof(TX_cfg_t));
+		break;
+	case CMD_AUDIO_SET_RXASP_POST_MUTE:
+		ctx->rxcfg.post_mute = arg;
+		break;
+	case CMD_AUDIO_SET_TXASP_POST_MUTE:
+		ctx->txcfg.post_mute = arg;
 		break;
 	case CMD_AUDIO_GET_RXASP_PARAM:
 		memcpy((void *) arg, (void *) & (ctx->rxcfg), sizeof(RX_cfg_t));
@@ -1663,6 +1675,9 @@ int audio_handle(void *p, void *input, void *output)
 				if ((ctx->inited_agc & AUDIO_TX_MASK) && (ATAF_AGC_CTRL & AUDIO_TX_MASK) && (cache_idx == 0)) {
 					RCV_AGC_process(AUDIO_DMA_PAGE_SIZE / sizeof(int16_t), (int16_t *)(cache->buffer.txasp_pcm));
 				}
+				if (ctx->txcfg.post_mute) {
+					memset((void *) cache->buffer.txasp_pcm, 0, AUDIO_DMA_PAGE_SIZE);
+				}
 #endif
 			}
 			if (audio_get_tx_start_status(ctx->audio)) {
@@ -1857,7 +1872,8 @@ RX_cfg_t default_rx_asp_params = {
 		.NSLevel = 5,
 		.HPFEnable = 0,
 		.QuickConvergenceEnable = 0,
-	}
+	},
+	.post_mute = 0,
 };
 
 TX_cfg_t default_tx_asp_params = {
@@ -1881,6 +1897,7 @@ TX_cfg_t default_tx_asp_params = {
 		.HPFEnable = 0,
 		.QuickConvergenceEnable = 0,
 	},
+	.post_mute = 0,
 };
 #else
 RX_cfg_t default_rx_asp_params = {
@@ -1923,7 +1940,8 @@ RX_cfg_t default_rx_asp_params = {
 	.ns_cfg = {
 		.NS_EN = 0,
 		.NSLevel = 5,
-	}
+	},
+	.post_mute = 0,
 };
 
 TX_cfg_t default_tx_asp_params = {
@@ -1938,5 +1956,6 @@ TX_cfg_t default_tx_asp_params = {
 		.NS_EN = 0,
 		.NSLevel = 5,
 	},
+	.post_mute = 0,
 };
 #endif

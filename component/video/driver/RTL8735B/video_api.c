@@ -1309,7 +1309,7 @@ void video_pre_init_procedure(int ch, video_pre_init_params_t *parm)
 	} else {
 		video_isp_initial_items_t init_items;
 		init_items.init_brightness = 0x00;
-		init_items.init_contrast = 0x50;
+		init_items.init_contrast = 0x32;
 		init_items.init_flicker = 0x01;
 		init_items.init_hdr_mode = 0x0;
 		init_items.init_mirrorflip = 0xf0;
@@ -3359,7 +3359,7 @@ int video_meta_copy_info(video_meta_t *m_parm)
 		length =  sizeof(isp_statis_meta_t) + sizeof(isp_meta_t) + sizeof(af_statis_t) + sizeof(ae_statis_t) + sizeof(awb_statis_t) + VIDEO_META_UUID_SIZE + sizeof(
 					  tag);
 		ret = isp_get_AF_statis(&af_result);
-		ret = isp_get_AE_statis(&ae_result);
+		ret = isp_get_AE_statis(&ae_result, AE_STATIS_HIST);
 		ret = isp_get_AWB_statis(&awb_result);
 	} else {
 		length = sizeof(isp_statis_meta_t) + sizeof(isp_meta_t) + VIDEO_META_UUID_SIZE;

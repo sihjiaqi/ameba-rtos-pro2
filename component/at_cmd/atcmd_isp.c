@@ -17,7 +17,8 @@
 #include "module_video.h"
 #include "../../usb/usb_class/device/class/uvc/tuning-server.h"
 
-#define ENABLE_OSD_CMD 0
+#define ENABLE_OSD_CMD      0
+#define ENABLE_AE_METER_CMD 0
 
 //-------- AT SYS commands ---------------------------------------------------------------
 #define CMD_DATA_SIZE 65536
@@ -438,16 +439,32 @@ void fATII(void *arg)
 			} else {
 				printf("get info fail hal_video_get_AF_statis.\r\n");
 			}
-		} else if (strcmp(argv[2], "ae") == 0) {
+		} else if (strcmp(argv[2], "ae_hist") == 0) {
 			ae_statis_t ae_result;
-			int ret = isp_get_AE_statis(&ae_result);
+			int ret = isp_get_AE_statis(&ae_result, AE_STATIS_HIST);
 			if (!ret) {
 				printf("Value, Count, fr %d\n", (int)ae_result.frame_count);
 				for (int j = 0; j < 256; j++) {
 					printf("[%3d] %5d \n", j, ae_result.hist[j]);
 				}
 			} else {
-				printf("get info fail hal_video_get_AE_statis.\r\n");
+				printf("get info fail isp_get_AE_statis.\r\n");
+			}
+		} else if (strcmp(argv[2], "ae_ymean") == 0) {
+			ae_statis_t ae_result;
+			int ret = isp_get_AE_statis(&ae_result, AE_STATIS_YMEAN);
+			if (!ret) {
+				printf("fr %d\n", (int)ae_result.frame_count);
+				if (!ret) {
+					for (int j = 0; j < 16; j++) {
+						for (int k = 0; k < 16; k++) {
+							printf("%4d ", ae_result.hist[j * 16 + k]);
+						}
+						printf("\n");
+					}
+				}
+			} else {
+				printf("get info fail isp_get_AE_statis.\r\n");
 			}
 		} else if (strcmp(argv[2], "awb") == 0) {
 			awb_statis_t awb_result;
@@ -480,20 +497,7 @@ void fATII(void *arg)
 			ifAEStable = isp_get_ifAEstable(&cur_etgain, 500);
 			printf("ifAEStable=%d, pre_etgain=%d, cur_etgain=%d\r\n", ifAEStable, cur_etgain, pre_etgain);
 			pre_etgain = cur_etgain;
-		} else if (strcmp(argv[2], "ae_weight") == 0) {
-			uint8_t AE_wgt[256];
-			int wgt_size;
-			int ret = isp_get_AE_meter(AE_wgt, &wgt_size);
-			if (!ret) {
-				for (int j = 0; j < 16; j++) {
-					for (int k = 0; k < 16; k++) {
-						printf("%3d ", AE_wgt[j * 16 + k]);
-					}
-					printf("\n");
-				}
-			}
-		}
-		if (strcmp(argv[2], "mipi") == 0) {
+		} else if (strcmp(argv[2], "mipi") == 0) {
 			int value;
 			value = isp_get_info(MIPI_FRAME_COUNT);
 			printf("frame_cnt: 0x%08X (%d) \r\n", value, value);
@@ -688,6 +692,89 @@ EXIT:
 	printf("error at command format\r\n");
 }
 
+#if (ENABLE_AE_METER_CMD)
+#define AE_METER_SIZE	256
+
+void fATAE(void *arg)
+{
+	int argc = 0;
+	char *argv[MAX_ARGC] = {0};
+	argc = parse_param(arg, argv);
+	int i, j, length;
+	length = AE_METER_SIZE;
+	static int bifgetMeter = NOK;
+	static uint8_t ori_meter[AE_METER_SIZE];
+	uint8_t cur_meter[AE_METER_SIZE];
+	if (bifgetMeter == NOK) {
+		bifgetMeter = isp_get_AE_meter(ori_meter, &length);
+		if (bifgetMeter == NOK) {
+			return;
+		}
+		printf("=== default ae meter in IQ table ===\n");
+		for (i = 0; i < 16; i++) {
+			for (j = 0; j < 16; j++) {
+				printf("%3d ", ori_meter[i * 16 + j]);
+			}
+			printf("\n");
+		}
+	}
+	if (strcmp(argv[1], "left") == 0) {
+		for (i = 0; i < 16; i++) {
+			for (j = 0; j < 16; j++) {
+				if (j < 5) {
+					cur_meter[i * 16 + j] = ori_meter[i * 16 + j] + 15;
+				} else {
+					cur_meter[i * 16 + j] = ori_meter[i * 16 + j];
+				}
+			}
+		}
+	} else if (strcmp(argv[1], "center") == 0) {
+		for (i = 0; i < 16; i++) {
+			for (j = 0; j < 16; j++) {
+				if (j >= 5 && j <= 10) {
+					cur_meter[i * 16 + j] = ori_meter[i * 16 + j] + 15;
+				} else {
+					cur_meter[i * 16 + j] = ori_meter[i * 16 + j];
+				}
+			}
+		}
+	} else if (strcmp(argv[1], "right") == 0) {
+		for (i = 0; i < 16; i++) {
+			for (j = 0; j < 16; j++) {
+				if (j > 10) {
+					cur_meter[i * 16 + j] = ori_meter[i * 16 + j] + 15;
+				} else {
+					cur_meter[i * 16 + j] = ori_meter[i * 16 + j];
+				}
+			}
+		}
+	} else if (strcmp(argv[1], "spot") == 0) {
+		for (i = 0; i < 16; i++) {
+			for (j = 0; j < 16; j++) {
+				if ((j >= 5 && j <= 10) && (i >= 5 && i <= 10)) {
+					cur_meter[i * 16 + j] = 15;
+				} else {
+					cur_meter[i * 16 + j] = ori_meter[i * 16 + j];
+				}
+			}
+		}
+
+	} else {
+		memcpy(cur_meter, ori_meter, length);
+	}
+	int ret = isp_set_AE_meter(cur_meter, length);
+	if (!ret) {
+		printf("=== current ae meter ===\n");
+		for (i = 0; i < 16; i++) {
+			for (j = 0; j < 16; j++) {
+				printf("%3d ", cur_meter[i * 16 + j]);
+			}
+			printf("\n");
+		}
+	}
+}
+#endif
+
 log_item_t at_isp_items[] = {
 	{"ATIT", fATIT,},
 	{"ATIC", fATIC,},
@@ -696,6 +783,9 @@ log_item_t at_isp_items[] = {
 	{"ATIO", fATIO,},
 	{"ATIR", fATIR,},
 	{"ATIM", fATIM,},
+#if (ENABLE_AE_METER_CMD)
+	{"ATAE", fATAE,},
+#endif
 };
 
 void at_isp_init(void)

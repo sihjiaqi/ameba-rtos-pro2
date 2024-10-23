@@ -59,7 +59,8 @@ RX_cfg_t rx_asp_params = {
 		.NSLevel = 5,
 		.HPFEnable = 0,
 		.QuickConvergenceEnable = 0,
-	}
+	},
+	.post_mute = 0,
 };
 
 TX_cfg_t tx_asp_params = {
@@ -82,7 +83,8 @@ TX_cfg_t tx_asp_params = {
 		.NSLevel = 5,
 		.HPFEnable = 0,
 		.QuickConvergenceEnable = 0,
-	}
+	},
+	.post_mute = 0,
 };
 #else
 RX_cfg_t rx_asp_params = {
@@ -125,7 +127,8 @@ RX_cfg_t rx_asp_params = {
 	.ns_cfg = {
 		.NS_EN = 0,
 		.NSLevel = 5,
-	}
+	},
+	.post_mute = 0,
 };
 
 TX_cfg_t tx_asp_params = {
@@ -140,6 +143,7 @@ TX_cfg_t tx_asp_params = {
 		.NS_EN = 0,
 		.NSLevel = 5,
 	},
+	.post_mute = 0,
 };
 #endif
 
@@ -1112,6 +1116,37 @@ void fAUMICM(void *arg)
 	}
 }
 
+//Set pre or post asp mute for rx asp
+void fAURXASPM(void *arg)
+{
+	int argc = 0;
+	char *argv[MAX_ARGC] = {0};
+	int rxasp_mute = 0;
+	if (!arg) {
+		printf("\n\r[AURXASPM] Set up post mute for RX ASP: AURXASPM=[enable_mute]\n");
+
+		printf("  \r     [enable_mute]=0 or 1\n");
+		printf("  \r     Disable RX ASP mute by AURXASPM=0\n");
+		printf("  \r     Set up RX ASP post mute by AURXASPM=1\n");
+		return;
+	}
+
+	argc = parse_param(arg, argv);
+	if (argc) {
+		printf("argc = %d\r\n", argc);
+		rxasp_mute = atoi(argv[1]);
+		if (rxasp_mute == 0) {
+			printf("Disable the mute of RX ASP \r\n");
+			rx_asp_params.post_mute = 0;
+			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_RXASP_POST_MUTE, 0);
+		} else {
+			printf("Enable the post mute of RX ASP \r\n");
+			rx_asp_params.post_mute = 1;
+			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_RXASP_POST_MUTE, 1);
+		}
+	}
+}
+
 #if P2P_ENABLE
 extern int gProcessRun;
 //open audio RX p2p streaming
@@ -1644,6 +1679,38 @@ void fAUSPM(void *arg)
 			printf("Enable Speaker Mute\r\n");
 			audio_save_params.DAC_mute = 1;
 			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_SPK_ENABLE, 0);
+		}
+	}
+}
+
+//Set pre or post asp mute for tx asp
+void fAUTXASPM(void *arg)
+{
+	int argc = 0;
+	char *argv[MAX_ARGC] = {0};
+	int txasp_mute = 0;
+	if (!arg) {
+		printf("\n\r[AUTXASPM] Set up post mute for TX ASP: AUTXASPM=[enable_mute]\n");
+
+		printf("  \r     [enable_mute]=0 or 1\n");
+		printf("  \r     Disable TX ASP mute by AUTXASPM=0\n");
+		printf("  \r     Set up TX ASP post mute by AUTXASPM=1\n");
+		printf("  \r     Set up both of TX ASP pre and post mute by AUTXASPM=1,all\n");
+		return;
+	}
+
+	argc = parse_param(arg, argv);
+	if (argc) {
+		printf("argc = %d\r\n", argc);
+		txasp_mute = atoi(argv[1]);
+		if (txasp_mute == 0) {
+			printf("Disable the mute of TX ASP \r\n");
+			tx_asp_params.post_mute = 0;
+			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_TXASP_POST_MUTE, 0);
+		} else {
+			printf("Enable the post mute of TX ASP \r\n");
+			tx_asp_params.post_mute = 1;
+			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_TXASP_POST_MUTE, 1);
 		}
 	}
 }
@@ -2467,6 +2534,7 @@ log_item_t at_audio_save_items[ ] = {
 	{"AUNS",        fAUNS,      {NULL, NULL}}, //open and adjust the SW NS for mic
 	{"AUAGC",       fAUAGC,     {NULL, NULL}}, //open and adjust the SW AGC for mic
 	{"AUMICM",      fAUMICM,    {NULL, NULL}}, //enable/disable to mute the mic
+	{"AURXASPM",    fAURXASPM,  {NULL, NULL}}, //enable/disable post mute for RX ASP
 	//For Audio speaker
 	{"AUSPNS",      fAUSPNS,    {NULL, NULL}}, //open and adjust the SW NS for speaker
 	{"AUSPAGC",     fAUSPAGC,   {NULL, NULL}}, //open and adjust the SW AGC for speaker
@@ -2474,6 +2542,7 @@ log_item_t at_audio_save_items[ ] = {
 	{"AUSPKEQR",    fAUSPKEQR,  {NULL, NULL}}, //reset speaker eq parameters without audio reset
 	{"AUDAC",       fAUDAC,     {NULL, NULL}}, //adjust the DAC dain for speaker
 	{"AUSPM",       fAUSPM,     {NULL, NULL}}, //enable/disable to mute the speaker
+	{"AUTXASPM",    fAUTXASPM,  {NULL, NULL}}, //enable/disable post mute for TX ASP
 	{"AUTXMODE",    fAUTXMODE,  {NULL, NULL}}, //adjust speaker output to playtone/playback/noplay
 	{"TONEDBSW",    fTONEDBSW,  {NULL, NULL}}, //enable tone DB sweep with interval
 	{"AUAMPIN",     fAUAMPIN,   {NULL, NULL}}, //select the speaker amplifier pin

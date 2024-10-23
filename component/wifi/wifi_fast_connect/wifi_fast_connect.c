@@ -206,6 +206,45 @@ int write_fast_connect_data_to_flash(unsigned int offer_ip, unsigned int server_
 	return RTW_SUCCESS;
 }
 
+static uint8_t pno_wr_enable = 0;
+static uint8_t pno_wr_channel = 0;
+void wifi_set_pno_reconnect_channel(uint8_t channel)
+{
+	if (channel > 0) {
+		pno_wr_enable = 1;
+	}
+	pno_wr_channel = channel;
+}
+
+void wifi_get_pno_disconnect_params(char *ssid, uint8_t *ssid_len)
+{
+	struct wlan_fast_reconnect *data = (struct wlan_fast_reconnect *)malloc(sizeof(struct wlan_fast_reconnect));
+	if (data) {
+		memset(data, 0xff, sizeof(struct wlan_fast_reconnect));
+		sys_read_wlan_data_from_flash((uint8_t *)data, sizeof(struct wlan_fast_reconnect));
+
+		/* Check whether stored flash profile is empty */
+		struct wlan_fast_reconnect *empty_data;
+		empty_data = (struct wlan_fast_reconnect *)malloc(sizeof(struct wlan_fast_reconnect));
+		if (empty_data) {
+			memset(empty_data, 0xff, sizeof(struct wlan_fast_reconnect));
+			if (memcmp(empty_data, data, sizeof(struct wlan_fast_reconnect)) == 0) {
+				printf("[FAST_CONNECT] Fast connect profile is empty\n");
+				free(data);
+				free(empty_data);
+				return;
+			}
+			free(empty_data);
+		}
+
+		strcpy(ssid, (char *)(data->psk_essid));
+		*ssid_len = strlen((char *)(data->psk_essid));
+		free(data);
+	} else {
+		printf("[FAST_CONNECT] malloc buf fail\n");
+	}
+}
+
 /*
 * Usage:
 *       This function read previous saved wlan profile in flash and execute connection.
@@ -308,7 +347,12 @@ int wifi_do_fast_connect(void)
 
 		wifi_psk_info_set(&PSK_INFO);
 
-		channel = data->channel;
+		if (pno_wr_enable) {
+			channel = pno_wr_channel;
+			pno_wr_enable = 0;
+		} else {
+			channel = data->channel;
+		}
 		key_id = channel >> 28;
 		channel &= 0xff;
 		security_type = data->security_type;
