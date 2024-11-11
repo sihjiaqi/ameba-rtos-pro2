@@ -250,7 +250,7 @@ void tcp_app_task(void *param)
 	} else {
 		rtw_exit_critical(NULL, NULL);
 		if (ret != -4) {
-			wifi_off();
+			wifi_power_hci_axi_deinit();
 			HAL_WRITE32(0x40009000, 0x18, 0x1 | HAL_READ32(0x40009000, 0x18)); //SWR 1.35V
 			Standby(SLP_AON_TIMER | SLP_GTIMER, 1000000 /* 1s */, 0/* CLOCK */, 1 /* SRAM retention */);
 		}

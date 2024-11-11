@@ -190,6 +190,10 @@ static void example_mmf2_video_surport(void)
 	// CH1 Video -> JPEG (SNAPSHOT, Sync mode)
 	//mmf2_video_example_vipnn_facedet_sync_snapshot_init();
 
+	// H264 -> RTSP (V1)
+	// RGB  -> NN palm detect -> NN hand detect(V4)
+	//mmf2_video_example_vipnn_handgesture_init();
+
 	// Joint test RTSP MP4 with NN
 	// H264 -> MP4  (V1)
 	// H264 -> RTSP (V2)

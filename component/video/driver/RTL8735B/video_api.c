@@ -1337,7 +1337,13 @@ void video_pre_init_procedure(int ch, video_pre_init_params_t *parm)
 		v_adp->cmd[ch]->set_AE_init_flag = 1;
 		v_adp->cmd[ch]->all_init_iq_set_flag = 1;
 		v_adp->cmd[ch]->direct_i2c_mode = 1;
-		v_adp->cmd[ch]->init_exposure = parm->isp_ae_init_exposure;
+		//init exposure time min limit /*to fix*/
+		if(parm->isp_ae_init_exposure < 300) {
+			video_dprintf(VIDEO_LOG_MSG, "modify ae exposure time to 300\r\n");
+			v_adp->cmd[ch]->init_exposure = 300;
+		} else {
+			v_adp->cmd[ch]->init_exposure = parm->isp_ae_init_exposure;
+		}
 		v_adp->cmd[ch]->init_gain = parm->isp_ae_init_gain;
 	}
 	if (parm->isp_awb_enable) {
@@ -1699,50 +1705,59 @@ int video_open(video_params_t *v_stream, output_callback_t output_cb, void *ctx)
 	}
 
 	if (video_open_status() == 0) {
-		voe_info.voe_mcrop_enable = 0;
+		voe_info.voe_scale_up_en = 0;
 	}
 
-	if (v_stream->use_roi == 1) {
-		video_dprintf(VIDEO_LOG_INF, "set v%d roi \r\n", ch);
-		int roi_w = v_stream->roi.xmax - v_stream->roi.xmin;
-		int roi_h = v_stream->roi.ymax - v_stream->roi.ymin;
-		int ch0_mcrop_config = 0;
-		if (v_stream->middle_crop_en) {
-			if ((ch == 0) && (video_open_status() == 0)) {
-				if ((enc_in_w >= roi_w * 2) || (enc_in_h >= roi_h * 2)) {
-					video_dprintf(VIDEO_LOG_ERR, "error: Encoder width and height should both be less than roi_w/h multi two.\r\n");
-					status = NOK;
-					goto EXIT;
-				} else if ((enc_in_w < roi_w) || (enc_in_h < roi_h)) {
-					video_dprintf(VIDEO_LOG_ERR, "error: It don't support the scale down\r\n");
-					status = NOK;
-					goto EXIT;
-				} else {
-					voe_info.voe_mcrop_enable = 1;
-					hal_video_isp_clk_set(ch, 5, 0);
-				}
-			} else {
-				if (ch != 0) {
-					video_dprintf(VIDEO_LOG_ERR, "It don't support to setup the mcrop that it only support ch0\r\n");
-					status = NOK;
-					goto EXIT;
-				} else {
-					ch0_mcrop_config = 1;
-				}
-			}
-		} else if (voe_info.voe_mcrop_enable) {
-			video_dprintf(VIDEO_LOG_ERR, "It don't support to setup the ROI when the mcrop is enable\r\n");
-			status = NOK;
-			goto EXIT;
-		} else if ((roi_w < enc_in_w) || (roi_h < enc_in_h)) {
-			video_dprintf(VIDEO_LOG_ERR, "roi size should be larger than encode size\r\n");
+	if(voe_info.voe_scale_up_en == 0) {
+		int origin_width = (int)isp_info.sensor_width;
+		int origin_height = (int)isp_info.sensor_height;
+		if(v_stream->use_roi) {
+			origin_width = v_stream->roi.xmax - v_stream->roi.xmin;
+			origin_height = v_stream->roi.ymax - v_stream->roi.ymin;
+		}
+		if(origin_width <= 0 || origin_height <= 0) {
+			video_dprintf(VIDEO_LOG_ERR, "error: invlalid input resolution\r\n");
 			status = NOK;
 			goto EXIT;
 		}
-		if (ch0_mcrop_config) {
-			video_dprintf(VIDEO_LOG_INF, "It don't need to setup again\r\n");
+		if(enc_in_w <= origin_width && enc_in_h <= origin_height) {//scale down
+			if(v_stream->use_roi) {
+				video_dprintf(VIDEO_LOG_INF, "ch%d set_roi (%d,%d,%d,%d)\r\n", ch, v_stream->roi.xmin, v_stream->roi.ymin, origin_width, origin_height);
+				hal_video_isp_set_roi(ch, v_stream->roi.xmin, v_stream->roi.ymin, origin_width, origin_height);
+			}
+		} else if (enc_in_w >= origin_width && enc_in_h >= origin_height) {//scale up
+			if (ch != 0) {
+				video_dprintf(VIDEO_LOG_ERR, "error: scale up only support ch0\r\n");
+				status = NOK;
+				goto EXIT;
+			} else if ((enc_in_w >= origin_width * 2) || (enc_in_h >= origin_height * 2)) {
+				video_dprintf(VIDEO_LOG_ERR, "error: Encoder width and height should both be less than roi_w/h multi two.\r\n");
+				status = NOK;
+				goto EXIT;
+			} else if (enc_in_w > 2688 || enc_in_h > 1944) {
+				video_dprintf(VIDEO_LOG_ERR, "error: max scale up resolution is 2688x1944 \r\n");
+				status = NOK;
+				goto EXIT;
+			} else {
+				voe_info.voe_scale_up_en = 1;
+				hal_video_isp_clk_set(ch, 5, 0);
+				if(v_stream->use_roi) {
+					video_dprintf(VIDEO_LOG_INF, "ch%d set_roi (%d,%d,%d,%d)\r\n", ch, v_stream->roi.xmin, v_stream->roi.ymin, origin_width, origin_height);
+					hal_video_isp_set_roi(ch, v_stream->roi.xmin, v_stream->roi.ymin, origin_width, origin_height);
+				}
+			}
 		} else {
-			hal_video_isp_set_roi(ch, v_stream->roi.xmin, v_stream->roi.ymin, roi_w, roi_h);
+			video_dprintf(VIDEO_LOG_ERR, "error: invalid resolution %dx%d -> %dx%d\r\n", origin_width, origin_height, enc_in_w, enc_in_h);
+			status = NOK;
+			goto EXIT;
+		}
+	} else if (v_stream->use_roi) {
+		if (ch == 0) {
+			video_dprintf(VIDEO_LOG_INF, "It don't need to setup ch0 again\r\n");
+		} else {
+			video_dprintf(VIDEO_LOG_ERR, "It don't support to setup the ROI when scale up is enable\r\n");
+			status = NOK;
+			goto EXIT;
 		}
 	}
 
@@ -1770,21 +1785,6 @@ int video_open(video_params_t *v_stream, output_callback_t output_cb, void *ctx)
 		v_adp->cmd[ch]->inputFormat = v_stream->ext_fmt;
 	}
 	video_dprintf(VIDEO_LOG_INF, "[ch%d] video mode: ENC(%d) JPG(%d) YUV(%d)\n", ch, v_adp->cmd[ch]->EncMode, v_adp->cmd[ch]->JpegMode, v_adp->cmd[ch]->YuvMode);
-
-	if (v_stream->scale_up_en) {
-		if (ch != 0) {  // only ch0 support scaling up
-			video_dprintf(VIDEO_LOG_ERR, "error: scale up only support in ch0 \r\n");
-		} else if (enc_in_w < isp_info.sensor_width || enc_in_h < isp_info.sensor_height) {
-			video_dprintf(VIDEO_LOG_ERR, "error: width and height should both larger than sensor size \r\n");
-		} else if (v_stream->use_roi == 1) {
-			video_dprintf(VIDEO_LOG_ERR, "error: scale_up_en cannot be used with ROI crop \r\n");
-		} else if (enc_in_w > 2688 || enc_in_h > 1944) {
-			video_dprintf(VIDEO_LOG_ERR, "error: max scale up resolution is 2688x1944 \r\n");
-		} else {
-			video_dprintf(VIDEO_LOG_INF, "enable scale up in ch%d \r\n", ch);
-			hal_video_isp_clk_set(ch, 5, 0);
-		}
-	}
 
 	/* if (v_adp) {
 		v_adp->cmd[ch]->roiMapDeltaQpBlockUnit = 2; //0:64x64, 1:32x32, 2:16x16

@@ -285,19 +285,20 @@ void osd_render_task(void *arg)
 						obj->canvas_draw_msg[obj->canvas_draw_msg_count] = cavas_msg_recieve;
 						obj->canvas_draw_msg_count++;
 						break;
-					case CANVAS_MSG_LINE:
-						obj->bitmap[bimap_index].start_point.x = MIN(obj->bitmap[bimap_index].start_point.x,
-								cavas_msg_recieve.draw_data.line.start_point.x - cavas_msg_recieve.draw_data.line.line_width);
-						obj->bitmap[bimap_index].start_point.y = MIN(obj->bitmap[bimap_index].start_point.y,
-								cavas_msg_recieve.draw_data.line.start_point.y - cavas_msg_recieve.draw_data.line.line_width);
-						obj->bitmap[bimap_index].end_point.x = MAX(obj->bitmap[bimap_index].end_point.x,
-															   cavas_msg_recieve.draw_data.line.end_point.x + cavas_msg_recieve.draw_data.line.line_width);
-						obj->bitmap[bimap_index].end_point.y = MAX(obj->bitmap[bimap_index].end_point.y,
-															   cavas_msg_recieve.draw_data.line.end_point.y + cavas_msg_recieve.draw_data.line.line_width);
+					case CANVAS_MSG_LINE: {
+						int min_x = MIN(cavas_msg_recieve.draw_data.line.start_point.x, obj->bitmap[bimap_index].end_point.x);
+						int min_y = MIN(cavas_msg_recieve.draw_data.line.start_point.y, obj->bitmap[bimap_index].end_point.y);
+						int max_x = MAX(cavas_msg_recieve.draw_data.line.start_point.x, obj->bitmap[bimap_index].end_point.x);
+						int max_y = MAX(cavas_msg_recieve.draw_data.line.start_point.y, obj->bitmap[bimap_index].end_point.y);
+						obj->bitmap[bimap_index].start_point.x = MIN(obj->bitmap[bimap_index].start_point.x, min_x - cavas_msg_recieve.draw_data.line.line_width);
+						obj->bitmap[bimap_index].start_point.y = MIN(obj->bitmap[bimap_index].start_point.y, min_y - cavas_msg_recieve.draw_data.line.line_width);
+						obj->bitmap[bimap_index].end_point.x = MAX(obj->bitmap[bimap_index].end_point.x, max_x + cavas_msg_recieve.draw_data.line.line_width);
+						obj->bitmap[bimap_index].end_point.y = MAX(obj->bitmap[bimap_index].end_point.y, max_y + cavas_msg_recieve.draw_data.line.line_width);
 
 						obj->canvas_draw_msg[obj->canvas_draw_msg_count] = cavas_msg_recieve;
 						obj->canvas_draw_msg_count++;
-						break;
+						break;						
+					}
 					case CANVAS_MSG_POINT:
 						obj->bitmap[bimap_index].start_point.x = MIN(obj->bitmap[bimap_index].start_point.x,
 								cavas_msg_recieve.draw_data.point.x - cavas_msg_recieve.draw_data.point.pt_width);

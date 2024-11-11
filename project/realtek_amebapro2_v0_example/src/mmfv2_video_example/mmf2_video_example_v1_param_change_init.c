@@ -54,6 +54,25 @@ static rtsp2_params_t rtsp2_v1_params = {
 	}
 };
 
+enum param_change_option {
+	RESOLUTION_BPS_CHANGE_TEST = 0,
+	BPS_CHANGE_TEST,
+	QP_CHANGE_TEST,
+	FORCEI_TEST,
+	SCALE_UP_TEST,
+	ISP_INIT_TEST,
+	TEST_NUM
+};
+
+static const char* param_change_test_item[] = {
+	"RESOLUTION_BPS_CHANGE_TEST",
+	"BPS_CHANGE_TEST",
+	"QP_CHANGE_TEST",
+	"FORCEI_TEST",
+	"SCALE_UP_TEST",
+	"ISP_INIT_TEST"
+};
+
 static void change_resolution_parameter(int parm_index)
 {
 	if (parm_index == 0) {
@@ -69,9 +88,59 @@ static void change_resolution_parameter(int parm_index)
 	}
 }
 
+static uint32_t scale_up_width = 0;
+static uint32_t scale_up_height = 0;
+static video_roi_t crop_roi = {0};
+static int scale_up_load_demo_param(void)
+{
+	/*The scale up demo only demonstrates for sensor resolutions 1920x1080 and 2560x1440.
+	For other resolutions, users need to add the scale up size and roi settings.*/
+	if (sensor_params[USE_SENSOR].sensor_width == 1920 && sensor_params[USE_SENSOR].sensor_height == 1080) {
+		scale_up_width = 2560;
+		scale_up_height = 1440;
+		crop_roi.xmin = 80;
+		crop_roi.ymin = 44;
+		crop_roi.xmax = 80 + 1760;
+		crop_roi.ymax = 44 + 990;
+	} else if (sensor_params[USE_SENSOR].sensor_width == 2560 && sensor_params[USE_SENSOR].sensor_height == 1440) {
+		scale_up_width = 2688;
+		scale_up_height = 1520;
+		crop_roi.xmin = 280;
+		crop_roi.ymin = 156;
+		crop_roi.xmax = 280 + 2000;
+		crop_roi.ymax = 156 + 1126;
+	} else {
+		printf("Please add the scale up size and roi settings.\r\n");
+		return -1;
+	}
+	return 0;
+}
+
+static void scale_up_set_param(int idx)
+{
+	if(idx == 0) {
+		printf("revert video settings\n\r");
+		video_v1_params.width = sensor_params[USE_SENSOR].sensor_width;
+		video_v1_params.height = sensor_params[USE_SENSOR].sensor_height;
+		video_v1_params.use_roi = 0;
+	} else if (idx == 1) {
+		//only scale up
+		printf("%dx%d scale up to %dx%d test\n\r", video_v1_params.width, video_v1_params.height, scale_up_width, scale_up_height);
+		video_v1_params.width = scale_up_width;
+		video_v1_params.height = scale_up_height;
+		video_v1_params.use_roi = 0;
+	} else if (idx == 2) {
+		//crop + scale up
+		printf("crop %dx%d scale up to %dx%d test\n\r", (crop_roi.xmax - crop_roi.xmin), (crop_roi.ymax - crop_roi.ymin), scale_up_width, scale_up_height);
+		video_v1_params.width = scale_up_width;
+		video_v1_params.height = scale_up_height;
+		video_v1_params.use_roi = 1;
+		memcpy(&video_v1_params.roi, &crop_roi, sizeof(video_roi_t));
+	}
+}
+
 void mmf2_video_example_v1_param_change_init(void)
 {
-	int sw = 0;
 	int i = 0;
 
 	atcmd_userctrl_init();
@@ -83,7 +152,17 @@ void mmf2_video_example_v1_param_change_init(void)
 	video_v1_params.fps = sensor_params[USE_SENSOR].sensor_fps;
 	video_v1_params.gop = sensor_params[USE_SENSOR].sensor_fps;
 	/*rtsp parameter setting*/
-	rtsp2_v1_params.u.v.fps = sensor_params[USE_SENSOR].sensor_fps;
+	rtsp2_v1_params.u.v.fps = video_v1_params.fps;
+	rtsp2_v1_params.u.v.bps = video_v1_params.bps;
+
+	//malloc video heap with scale up resolution
+	if(scale_up_load_demo_param() == 0) {
+		video_v1_params.width = scale_up_width;
+		video_v1_params.height = scale_up_height;
+	} else {
+		goto mmf2_video_exmaple_v1_param_change_fail;
+	}
+
 #if (USE_UPDATED_VIDEO_HEAP == 0)
 	int voe_heap_size = video_voe_presetting(1, video_v1_params.width, video_v1_params.height, V1_BPS, 0,
 						0, 0, 0, 0, 0,
@@ -94,13 +173,17 @@ void mmf2_video_example_v1_param_change_init(void)
 #endif
 	printf("\r\n voe heap size = %d\r\n", voe_heap_size);
 
+	//revert video resolution settings
+	video_v1_params.width = sensor_params[USE_SENSOR].sensor_width;
+	video_v1_params.height = sensor_params[USE_SENSOR].sensor_height;
+
 	video_v1_ctx = mm_module_open(&video_module);
 	if (video_v1_ctx) {
 		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_SET_PARAMS, (int)&video_v1_params);
 		mm_module_ctrl(video_v1_ctx, MM_CMD_SET_QUEUE_LEN, video_v1_params.fps * 3);
 		mm_module_ctrl(video_v1_ctx, MM_CMD_INIT_QUEUE_ITEMS, MMQI_FLAG_DYNAMIC);
 	} else {
-		rt_printf("video open fail\n\r");
+		printf("video open fail\n\r");
 		goto mmf2_video_exmaple_v1_param_change_fail;
 	}
 
@@ -111,7 +194,7 @@ void mmf2_video_example_v1_param_change_init(void)
 		mm_module_ctrl(rtsp2_v1_ctx, CMD_RTSP2_SET_APPLY, 0);
 		mm_module_ctrl(rtsp2_v1_ctx, CMD_RTSP2_SET_STREAMMING, ON);
 	} else {
-		rt_printf("RTSP2 open fail\n\r");
+		printf("RTSP2 open fail\n\r");
 		goto mmf2_video_exmaple_v1_param_change_fail;
 	}
 
@@ -124,56 +207,148 @@ void mmf2_video_example_v1_param_change_init(void)
 		siso_ctrl(siso_video_rtsp_v1, MMIC_CMD_ADD_OUTPUT, (uint32_t)rtsp2_v1_ctx, 0);
 		siso_start(siso_video_rtsp_v1);
 	} else {
-		rt_printf("siso2 open fail\n\r");
+		printf("siso2 open fail\n\r");
 		goto mmf2_video_exmaple_v1_param_change_fail;
 	}
 
 	mm_module_ctrl(video_v1_ctx, CMD_VIDEO_APPLY, V1_CHANNEL);
-
-	rt_printf("changing resolution and bps test\n\r");
-	for (i = 0; i < 2; i++) {
-		sw++;
-		sw &= 1;
-		// wait 30 seconds, change resolution
-		vTaskDelay(30000);
-		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_STREAM_STOP, V1_CHANNEL);
-		change_resolution_parameter(sw);
-
-
-		siso_pause(siso_video_rtsp_v1);
-
-		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_SET_PARAMS, (int)&video_v1_params);
-		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_APPLY, V1_CHANNEL);	// start channel 0
-
-		siso_resume(siso_video_rtsp_v1);
-	}
-
-	for (i = 0; i < 10; i++) {
-		vTaskDelay(10000);
-		rt_printf("changing bit rate test = %d\n\r", (1024 * 1024 + 1024 * (1 + i)));
-		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_BPS, (1024 * 1024 + 1024 * (1 + i)));
-	}
-	for (i = 0; i < 5; i++) {
-		vTaskDelay(10000);
-		rt_printf("changing QP test = %d, %d\n\r", (25 + i * 2), (35 + i * 2));
-		encode_rc_parm_t rc_parm;
-		memset(&rc_parm, 0, sizeof(encode_rc_parm_t));
-		rc_parm.minQp = (25 + i * 2);
-		rc_parm.maxQp = (35 + i * 2);
-
-		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_SET_RCPARAM, (int)&rc_parm);
-	}
-
-
-	for (i = 0; i < 10; i++) {
-		vTaskDelay(500);
-		rt_printf("changing forcei test\n\r");
-		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_FORCE_IFRAME, 0);
-	}
+	printf("PCT=[idx] or PCT=list or PCT=all\n\r");
 
 	return;
 mmf2_video_exmaple_v1_param_change_fail:
 
+	return;
+}
+
+static void param_change_test(int idx)
+{
+	int i;
+	switch (idx)
+	{
+	case RESOLUTION_BPS_CHANGE_TEST:
+		printf("changing resolution and bps test\n\r");
+		for (i = 0; i < 2; i++) {
+			siso_pause(siso_video_rtsp_v1);
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_STREAM_STOP, V1_CHANNEL);
+			change_resolution_parameter(i);
+
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_SET_PARAMS, (int)&video_v1_params);
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_APPLY, V1_CHANNEL);	// start channel 0
+			siso_resume(siso_video_rtsp_v1);
+			// wait 3 seconds, change resolution
+			vTaskDelay(3000);
+		}
+		break;
+	case BPS_CHANGE_TEST:
+		for (i = 0; i < 10; i++) {
+			printf("changing bit rate test = %d\n\r", (1024 * 1024 + 1024 * (1 + i)));
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_BPS, (1024 * 1024 + 1024 * (1 + i)));
+			vTaskDelay(3000);
+		}
+		printf("revert bitrate to %d\n\r", V1_BPS);
+		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_BPS, V1_BPS);
+		break;
+	case QP_CHANGE_TEST:
+		for (i = 0; i < 5; i++) {
+			printf("changing QP test = %d, %d\n\r", (25 + i * 2), (35 + i * 2));
+			encode_rc_parm_t rc_parm;
+			memset(&rc_parm, 0, sizeof(encode_rc_parm_t));
+			rc_parm.minQp = (25 + i * 2);
+			rc_parm.maxQp = (35 + i * 2);
+
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_SET_RCPARAM, (int)&rc_parm);
+			vTaskDelay(3000);
+		}
+		break;
+	case FORCEI_TEST:
+		for (i = 0; i < 10; i++) {
+			printf("changing forcei test\n\r");
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_FORCE_IFRAME, 0);
+			vTaskDelay(500);
+		}
+		break;
+	case SCALE_UP_TEST:
+		printf("scale up test\n\r");
+		for(i = 0; i < 2; i++) {
+			siso_pause(siso_video_rtsp_v1);
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_STREAM_STOP, V1_CHANNEL);
+			scale_up_set_param(i + 1);
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_SET_PARAMS, (int)&video_v1_params);
+			mm_module_ctrl(video_v1_ctx, CMD_VIDEO_APPLY, V1_CHANNEL);	// start channel 0
+			siso_resume(siso_video_rtsp_v1);
+			vTaskDelay(5000);
+		}
+
+		printf("revert to origin settings\n\r");
+		siso_pause(siso_video_rtsp_v1);
+		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_STREAM_STOP, V1_CHANNEL);
+		scale_up_set_param(0);
+		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_SET_PARAMS, (int)&video_v1_params);
+		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_APPLY, V1_CHANNEL);	// start channel 0
+		siso_resume(siso_video_rtsp_v1);
+		break;
+	case ISP_INIT_TEST:
+		printf("isp init test\n\r");
+		siso_pause(siso_video_rtsp_v1);
+		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_STREAM_STOP, V1_CHANNEL);
+		video_pre_init_params_t init_params;
+		memset(&init_params, 0x00, sizeof(video_pre_init_params_t));
+		//enable drop frame
+		init_params.video_drop_enable = 1;
+		init_params.video_drop_frame = 5;
+		
+		//isp init settings
+		init_params.isp_init_enable = 1;
+		init_params.init_isp_items.init_brightness = 0x00;
+		init_params.init_isp_items.init_contrast = 0x50;
+		init_params.init_isp_items.init_flicker = 0x02;
+		init_params.init_isp_items.init_hdr_mode = 0x00;
+		init_params.init_isp_items.init_mirrorflip = 0xf0;
+		init_params.init_isp_items.init_saturation = 050;
+		init_params.init_isp_items.init_wdr_level = 0x50;
+		init_params.init_isp_items.init_wdr_mode = 0x02;
+		init_params.init_isp_items.init_mipi_mode = 0x0;
+		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_PRE_INIT_PARM, (int)&init_params);
+		mm_module_ctrl(video_v1_ctx, CMD_VIDEO_APPLY, V1_CHANNEL);	// start channel 0
+		siso_resume(siso_video_rtsp_v1);
+		break;
+	default:
+		break;
+	}
+}
+
+static void fPCT(void *arg) //param change test
+{
+	int argc = 0;
+	char *argv[MAX_ARGC] = {0};
+
+	if (!arg) {
+		return;
+	}
+	argc = parse_param(arg, argv);
+	if (argc > 2) {
+		return;
+	}
+	if (argc == 1) {
+		// get array size
+		//
+		printf("PCT=[idx] or PCT=list or PCT=all\n\r");
+	} else {
+		if (strcmp("all", argv[1]) == 0) {
+			for (int i = 0; i < TEST_NUM; i++) {
+				param_change_test(i);
+			}
+			return;
+		} else if (strcmp("list", argv[1]) == 0) {
+			for (int i = 0; i < TEST_NUM; i++) {
+				printf("%02d : %s\n\r", i, param_change_test_item[i]);
+			}
+			return;
+		}
+
+		int idx = strtol(argv[1], NULL, 10);
+		param_change_test(idx);
+	}
 	return;
 }
 
@@ -225,6 +400,7 @@ static void fUC(void *arg)
 
 static log_item_t userctrl_items[] = {
 	{"UC", fUC, },
+	{"PCT", fPCT, },
 };
 
 static void atcmd_userctrl_init(void)

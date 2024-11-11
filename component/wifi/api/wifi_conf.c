@@ -578,7 +578,7 @@ void wifi_set_user_config(void)
 
 	wifi_user_config.fast_pscan_retry_times_max = 14;
 
-	wifi_default_config.listen_interval = 10;
+	wifi_default_config.listen_interval = 0;
 
 	u32 cfg_size_lib, cfg_size_user;
 	cfg_size_lib = rtw_check_wifi_user_config_size();

@@ -4340,6 +4340,35 @@ int lwip_gettcpstatus(int s, uint32_t *seqno, uint32_t *ackno, uint16_t *wnd)
   return 0;
 }
 
+struct check_accept_call_data {
+  struct tcpip_api_call_data call;
+  uint8_t ret;
+};
+
+static void do_check_accept(struct tcpip_api_call_data *p)
+{
+  struct check_accept_call_data *call = (struct check_accept_call_data *) p;
+
+  for (int i = 0; i < NUM_SOCKETS; i ++) {
+    struct netconn *conn = sockets[i].conn;
+    if (conn && (conn->type == NETCONN_TCP) && (conn->acceptmbox != SYS_MBOX_NULL)) {
+      extern uint32_t sys_mbox_get_count(sys_mbox_t *mbox);
+      if (sys_mbox_get_count(&conn->acceptmbox) > 0) {
+        call->ret = 1;
+        return;
+      }
+    }
+  }
+  call->ret = 0;
+}
+
+uint8_t lwip_check_accept(void)
+{
+  struct check_accept_call_data call;
+  tcpip_api_call(do_check_accept, (struct tcpip_api_call_data *) &call);
+  return call.ret;
+}
+
 #if defined(CONFIG_LWIP_TCP_RESUME) && (CONFIG_LWIP_TCP_RESUME == 1)
 int lwip_retain_tcp(int s)
 {

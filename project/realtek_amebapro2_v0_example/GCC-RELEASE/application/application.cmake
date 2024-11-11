@@ -548,32 +548,6 @@ list(
 	${sdk_root}/component/media/framework/sensor_service.c
 )
 
-#MMF_MODULE
-list(
-	APPEND app_sources	
-	${sdk_root}/component/media/mmfv2/module_video.c
-	${sdk_root}/component/media/mmfv2/module_rtsp2.c
-	${sdk_root}/component/media/mmfv2/module_array.c
-	${sdk_root}/component/media/mmfv2/module_audio.c
-	${sdk_root}/component/media/mmfv2/module_aac.c
-	${sdk_root}/component/media/mmfv2/module_aad.c
-	${sdk_root}/component/media/mmfv2/module_g711.c
-	${sdk_root}/component/media/mmfv2/module_httpfs.c
-	${sdk_root}/component/media/mmfv2/module_i2s.c
-	${sdk_root}/component/media/mmfv2/module_mp4.c
-	${sdk_root}/component/media/mmfv2/module_rtp.c
-    ${sdk_root}/component/media/mmfv2/module_opusc.c
-	${sdk_root}/component/media/mmfv2/module_opusd.c
-    ${sdk_root}/component/media/mmfv2/module_uvcd.c
-    ${sdk_root}/component/media/mmfv2/module_demuxer.c
-    ${sdk_root}/component/media/mmfv2/module_eip.c
-    ${sdk_root}/component/media/mmfv2/module_md.c
-    ${sdk_root}/component/media/mmfv2/module_fmp4.c
-    ${sdk_root}/component/media/mmfv2/module_fileloader.c
-    ${sdk_root}/component/media/mmfv2/module_filesaver.c
-    ${sdk_root}/component/media/mmfv2/module_queue.c
-)
-
 #MISC
 list(
 	APPEND app_sources
@@ -660,14 +634,6 @@ list(
 	${sdk_root}/component/bluetooth/rtk_stack/example/bt_config/bt_config_peripheral_app.c
 	${sdk_root}/component/bluetooth/rtk_stack/example/bt_config/bt_config_service.c
 	${sdk_root}/component/bluetooth/rtk_stack/example/bt_config/bt_config_wifi.c
-)
-
-#NN module
-list(
-	APPEND app_sources
-
-	${sdk_root}/component/media/mmfv2/module_vipnn.c
-	${sdk_root}/component/media/mmfv2/module_facerecog.c
 )
 
 if(PICOLIBC)

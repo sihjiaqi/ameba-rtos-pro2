@@ -235,6 +235,12 @@ void sys_mbox_set_invalid(sys_mbox_t *mbox)
 }
 
 /*-----------------------------------------------------------------------------------*/
+uint32_t sys_mbox_get_count(sys_mbox_t *mbox)
+{
+  return uxQueueMessagesWaiting(*mbox);
+}
+
+/*-----------------------------------------------------------------------------------*/
 //  Creates a new semaphore. The "count" argument specifies
 //  the initial state of the semaphore.
 err_t sys_sem_new(sys_sem_t *sem, u8_t count)

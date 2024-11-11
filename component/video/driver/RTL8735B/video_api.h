@@ -207,6 +207,13 @@ typedef struct private_mask_single_s {
 	uint32_t bitmap[40];
 } private_mask_single_t;
 
+typedef struct video_roi_s {
+	uint32_t xmin;
+	uint32_t ymin;
+	uint32_t xmax;
+	uint32_t ymax;
+} video_roi_t;
+
 typedef struct video_param_s {
 	uint32_t stream_id;
 	uint32_t type;
@@ -225,12 +232,7 @@ typedef struct video_param_s {
 	uint32_t use_static_addr;
 	uint32_t fcs;
 	uint32_t use_roi;
-	struct video_roi_s {
-		uint32_t xmin;
-		uint32_t ymin;
-		uint32_t xmax;
-		uint32_t ymax;
-	} roi;
+	video_roi_t roi;
 	uint32_t level;
 	uint32_t profile;
 	uint32_t cavlc;
@@ -241,11 +243,9 @@ typedef struct video_param_s {
 	uint32_t minQp;
 	uint32_t maxQp;
 	uint32_t fast_osd_en;
-	uint32_t scale_up_en;  //1.only support in ch0  2.width and height should both larger than sensor size  3.cannot be used with ROI crop  4.max scale up resolution is 2688x1944
 	uint32_t vui_disable;//Disable the VUI feature that the sps/pps won't be changed.
 	uint32_t meta_enable;
 	jpeg_crop_parm_t jpeg_crop_parm;
-	uint32_t middle_crop_en;//Middle crop functio only support in ch0
 } video_params_t;
 
 typedef struct voe_info_s {
@@ -253,7 +253,7 @@ typedef struct voe_info_s {
 	uint32_t voe_heap_size;
 	video_params_t video_info[MAX_CHANNEL];
 	uint32_t stream_is_open[MAX_CHANNEL];
-	uint32_t voe_mcrop_enable;
+	uint32_t voe_scale_up_en;
 } voe_info_t;
 
 typedef struct mult_sensor_info_s {

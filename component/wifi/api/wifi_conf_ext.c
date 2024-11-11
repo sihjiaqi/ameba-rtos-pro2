@@ -26,6 +26,8 @@
 #include "bt_intf.h"
 #endif
 
+#include "power_mode_api.h"
+
 /******************************************************
  *                    Constants
  ******************************************************/
@@ -828,4 +830,47 @@ int wifi_issue_nulldata(unsigned int power_mode)
 	return rltk_wlan_issue_nulldata(power_mode);
 }
 
+int wifi_get_rx_queue_count(unsigned int *recvframe_cnt)
+{
+
+	return rltk_wlan_get_rx_queue_count(recvframe_cnt);
+
+}
+
+//disable the wifi module power
+void wifi_power_hci_axi_deinit(void)
+{
+	printf("[%s] disable power module\n\r", __FUNCTION__);
+	AON_TypeDef *aon_wlan = AON;
+
+	// RF1 enable clock source control
+	aon_wlan->AON_REG_AON_XTAL_CLK_CTRL1 &= (~AON_BIT_EN_XTAL_DRV_RF1);
+	// RF2 enable clock source control
+	aon_wlan->AON_REG_AON_XTAL_CLK_CTRL1 &= (~AON_BIT_EN_XTAL_DRV_RF2);
+	// AFE enable clock source control
+	aon_wlan->AON_REG_AON_XTAL_CLK_CTRL1 &= (~AON_BIT_EN_XTAL_DRV_AFE);
+	// DIGI enable clock source control
+	aon_wlan->AON_REG_AON_XTAL_CLK_CTRL1 &= (~AON_BIT_EN_XTAL_DRV_DIGI);
+	// LPS enable clock source control
+	// 20231106 remove: change clk to Xtal for LPS
+	//aon_wlan->AON_REG_AON_XTAL_CLK_CTRL1 &= (~AON_BIT_EN_XTAL_DRV_LPS);
+
+	aon_wlan->AON_REG_AON_WL_CTRL &= (~AON_BIT_SYS_WLAFE_POD33);
+
+	aon_wlan->AON_REG_AON_WL_CTRL &= (~AON_BIT_SYS_WLAFE_POD125);
+
+	aon_wlan->AON_REG_AON_WL_CTRL &= (~AON_BIT_SYS_WLON_CLK_EN);
+
+	aon_wlan->AON_REG_AON_WL_CTRL &= (~AON_BIT_SYS_WL_AXI_EN);
+
+	aon_wlan->AON_REG_AON_WL_CTRL &= (~AON_BIT_SYS_WLAXI_CLK_EN);
+
+	aon_wlan->AON_REG_AON_WL_CTRL &= (~AON_BIT_SYS_WLON_EN);
+
+	aon_wlan->AON_REG_AON_ISO_CTRL |= AON_BIT_SYS_ISO_WLON;
+
+	aon_wlan->AON_REG_AON_PWR_CTRL &= (~AON_BIT_WLON_LPC_EN);
+
+	aon_wlan->AON_REG_AON_PWR_CTRL &= (~AON_BIT_WLON_SPC_EN);
+}
 #endif	//#if CONFIG_WLAN

@@ -1423,6 +1423,22 @@ int wifi_set_channel_plan(u8 channel_plan);
  * 	Otherwise, return 1.
  */
 int wifi_issue_nulldata(unsigned int power_mode);
+
+/**
+ * @brief  there is function for wifi_get_rx_queue_count to get wifi rx queue cnt
+ * @param[in]  recvframe_cnt: can be get wifi rx queue cnt
+ * @return  If the function succeeds, the return value is 0.
+ * 	Otherwise, return 1.
+ */
+
+int wifi_get_rx_queue_count(unsigned int *recvframe_cnt);
+
+/**
+ * @brief  deinit wifi power by register method
+ * @return  None
+ */
+void wifi_power_hci_axi_deinit(void);
+
 /**
 * @}
 */

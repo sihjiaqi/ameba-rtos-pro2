@@ -86,6 +86,8 @@ void mmf2_video_example_vipnn_facedet_sync_init(void);
 
 void mmf2_video_example_vipnn_facedet_sync_snapshot_init(void);
 
+void mmf2_video_example_vipnn_handgesture_init(void);
+
 void mmf2_video_example_md_nn_rtsp_init(void);
 
 void mmf2_video_example_joint_test_rtsp_mp4_init_fcs(void);

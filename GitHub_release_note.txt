@@ -1,6 +1,9 @@
 
 GitHub Update Note, sync with 9.6_r
 
+SHA-1: 814bf67e48e7b1da996d5bbebe84c8b2eeda4f41
+* [amebapro2][sdk] add new scenario - ai glass
+
 SHA-1: ccd2b17cbee9a5faa0004f138139c123463a8904
 * [amebapro2][video] update sensor driver & video related default setting
 

@@ -64,7 +64,6 @@ static int(*sensor_setup)(int status, int sensor_id) = NULL;
 //////////////////
 static int flash_sensor_id = -1;
 static isp_info_t info;
-static int fps_drop_frame = 1;
 
 #define CH_NUM 5
 #define RATE_CTRL_DEBOUNCE	1
@@ -241,33 +240,6 @@ void video_ch4_delay_release(int ch4_release_fail_add)
 	if (xTaskCreate(video_ch4_delay_release_task, ((const char *)"ch4_release"), 256, (void *)ch4_release_fail_add, tskIDLE_PRIORITY + 4, NULL) != pdPASS) {
 		printf("\r\n video_ch4_delay_release: Create Task Error\n");
 	}
-}
-void video_set_fps_dropframe_mode(int drop_frame)
-{
-	if (drop_frame == 0) {
-		fps_drop_frame = 0;
-	} else {
-		fps_drop_frame = 1;
-	}
-}
-
-void video_fix_param(video_ctx_t *ctx, int id)
-{
-	struct sensor_params_t cur_snr = sensor_params[sen_id[id]];
-	if ((ctx->params.width > cur_snr.sensor_width || ctx->params.height > cur_snr.sensor_height) && (ctx->params.scale_up_en == 0)) {
-		ctx->params.width = cur_snr.sensor_width;
-		ctx->params.height = cur_snr.sensor_height;
-	}
-	if (ctx->params.fps > cur_snr.sensor_fps) {
-		ctx->params.gop = (cur_snr.sensor_fps * ctx->params.gop) / ctx->params.fps;
-		ctx->params.fps = cur_snr.sensor_fps;
-	}
-	if (fps_drop_frame) {
-		info.sensor_fps = cur_snr.sensor_fps;
-	} else {
-		info.sensor_fps = ctx->params.fps;
-	}
-	video_set_isp_info(&info);
 }
 
 void video_frame_complete_cb(void *param1, void  *param2, uint32_t arg)
@@ -653,8 +625,8 @@ int video_control(void *p, int cmd, int arg)
 	case CMD_VIDEO_STREAM_STOP: {
 		int ch = ctx->params.stream_id;
 		if (video_get_stream_info(ch) == 0) {
-			VIDEO_DBG_ERROR("CH %d already close\r\n", ch);
-			return NOK;
+			VIDEO_DBG_WARNING("CH %d already close\r\n", ch);
+			return OK;
 		}
 
 		while (incb[ch]) {
@@ -796,12 +768,6 @@ int video_control(void *p, int cmd, int arg)
 			}
 		}
 
-		if (sensor_id_value > 0 && sensor_id_value < SENSOR_MAX) {
-			video_fix_param(ctx, sensor_id_value);
-		} else if (flash_sensor_id >= 0 && flash_sensor_id < SENSOR_MAX) {
-			video_fix_param(ctx, flash_sensor_id);
-		}
-
 		ret = video_open(&ctx->params, video_frame_complete_cb, ctx);
 
 #if MULTI_SENSOR
@@ -820,8 +786,6 @@ int video_control(void *p, int cmd, int arg)
 
 				if (1) {
 					video_reset_fw(ch, id);
-
-					video_fix_param(ctx, id);
 					ret = video_open(&ctx->params, video_frame_complete_cb, ctx);
 					if (ret >= 0) {
 						sensor_id_value = id;
@@ -843,9 +807,6 @@ int video_control(void *p, int cmd, int arg)
 					//The fcs mode fail that it need to do the reset.
 					VIDEO_DBG_INFO("Reset fcs mode to common mode\r\n");
 					video_reset_fw(ch, sensor_id_value);
-					if (sensor_id_value > 0 && sensor_id_value < SENSOR_MAX) {
-						video_fix_param(ctx, sensor_id_value);
-					}
 					ret = video_open(&ctx->params, video_frame_complete_cb, ctx);
 				} */
 		if (ret < 0 && video_get_video_sensor_status() == 0) { //Change the sensor procedure
