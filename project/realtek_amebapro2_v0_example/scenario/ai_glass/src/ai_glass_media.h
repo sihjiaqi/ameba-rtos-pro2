@@ -76,8 +76,8 @@ typedef struct ai_glass_snapshot_param_s {
 #define MAX_LIFESNAP_HEIGHT         HEIGHT_12M
 #define MAX_AISNAP_WIDTH            sensor_params[USE_SENSOR].sensor_width
 #define MAX_AISNAP_HEIGHT           sensor_params[USE_SENSOR].sensor_height
-#define MAX_RECORD_WIDTH            WIDTH_2K
-#define MAX_RECORD_HEIGHT           HEIGHT_2K
+#define MAX_RECORD_WIDTH            ((sensor_params[USE_SENSOR].sensor_width > WIDTH_2K) ? WIDTH_2K : sensor_params[USE_SENSOR].sensor_width)
+#define MAX_RECORD_HEIGHT           ((sensor_params[USE_SENSOR].sensor_height > HEIGHT_2K) ? HEIGHT_2K : sensor_params[USE_SENSOR].sensor_height)
 #define MAX_RECORD_BPS              (4*1024*1024)
 #define MIN_RECORD_BPS              (512*1024)
 #define MAX_RECORD_FPS              sensor_params[USE_SENSOR].sensor_fps
@@ -87,8 +87,8 @@ typedef struct ai_glass_snapshot_param_s {
 
 
 #define DEFAULT_RECORD_TYPE         VIDEO_H264
-#define DEFAULT_RECORD_WIDTH        WIDTH_2K
-#define DEFAULT_RECORD_HEIGHT       HEIGHT_2K
+#define DEFAULT_RECORD_WIDTH        ((sensor_params[USE_SENSOR].sensor_width > WIDTH_2K) ? WIDTH_2K : sensor_params[USE_SENSOR].sensor_width)
+#define DEFAULT_RECORD_HEIGHT       ((sensor_params[USE_SENSOR].sensor_height > HEIGHT_2K) ? HEIGHT_2K : sensor_params[USE_SENSOR].sensor_height)
 #define DEFAULT_RECORD_BPS          (4*1024*1024)
 #define DEFAULT_RECORD_FPS          24
 #define DEFAULT_RECORD_GOP          24

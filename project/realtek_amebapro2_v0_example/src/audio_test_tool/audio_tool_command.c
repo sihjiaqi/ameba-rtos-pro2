@@ -58,7 +58,7 @@ RX_cfg_t rx_asp_params = {
 		.NS_EN = 0,
 		.NSLevel = 5,
 		.HPFEnable = 0,
-		.QuickConvergenceEnable = 0,
+		.NSSlowConvergence = 200,
 	},
 	.post_mute = 0,
 };
@@ -82,7 +82,7 @@ TX_cfg_t tx_asp_params = {
 		.NS_EN = 0,
 		.NSLevel = 5,
 		.HPFEnable = 0,
-		.QuickConvergenceEnable = 0,
+		.NSSlowConvergence = 200,
 	},
 	.post_mute = 0,
 };
@@ -802,12 +802,12 @@ void fAUNS(void *arg)
 
 #if defined(CONFIG_NEWAEC) && CONFIG_NEWAEC
 	if (!arg) {
-		printf("\n\r[AUNS] Set up mic NS module: AUNS=[NS_enable],[NS_level],[NS_HPFEnable],[NS_QuickConvergenceEnable]\n");
+		printf("\n\r[AUNS] Set up mic NS module: AUNS=[NS_enable],[NS_level],[NS_HPFEnable],[NS_SlowConvergence]\n");
 
 		printf("  \r     [NS_enable]=0 or 1\n");
 		printf("  \r     [NS_level]=3~35 to set the NS level (dB), more NS level more aggressive\n");
 		printf("  \r     [NS_HPFEnable]=0/1 to enable the HPF before NS or not\n");
-		printf("  \r     [NS_QuickConvergenceEnable]=0/1 to the NS convergence speed, immediately suppress(quick) 1, smooth suppress 0\n");
+		printf("  \r     [NS_SlowConvergence]=0~100 to the NS convergence speed\n");
 		printf("  \r     Set NS in AEC process with NS level 3 by AUNS=1,3\n");
 		printf("  \r     Set NS in AEC process with NS level 3, without HPF and quick drop by AUNS=1,3,0,1\n");
 		printf("  \r     Disable NS by AUNS=0\n");
@@ -828,12 +828,12 @@ void fAUNS(void *arg)
 				rx_asp_params.ns_cfg.HPFEnable = atoi(argv[3]);
 			}
 			if (argc >= 5) {
-				rx_asp_params.ns_cfg.QuickConvergenceEnable = atoi(argv[4]);
+				rx_asp_params.ns_cfg.NSSlowConvergence = atoi(argv[4]);
 			}
 			rx_asp_params.ns_cfg.NS_EN = 1;
 			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_RXASP_PARAM, (int)&rx_asp_params);
 			printf("Enable mic NS = %x, level %d, HPF %d, QuickConvergence %d\r\n", rx_asp_params.ns_cfg.NS_EN, rx_asp_params.ns_cfg.NSLevel,
-				   rx_asp_params.ns_cfg.HPFEnable, rx_asp_params.ns_cfg.QuickConvergenceEnable);
+				   rx_asp_params.ns_cfg.HPFEnable, rx_asp_params.ns_cfg.NSSlowConvergence);
 		} else {
 			rx_asp_params.ns_cfg.NS_EN = 0;
 			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_RXASP_PARAM, (int)&rx_asp_params);
@@ -1237,12 +1237,12 @@ void fAUSPNS(void *arg)
 
 #if defined(CONFIG_NEWAEC) && CONFIG_NEWAEC
 	if (!arg) {
-		printf("\n\r[AUSPNS] Set up speaker NS module: AUSPNS=[NS_enable],[NS_level],[NS_HPFEnable],[NS_QuickConvergenceEnable]\n");
+		printf("\n\r[AUSPNS] Set up speaker NS module: AUSPNS=[NS_enable],[NS_level],[NS_HPFEnable],[NS_SlowConvergence]\n");
 
 		printf("  \r     [NS_enable]=0 or 1\n");
 		printf("  \r     [NS_level]=3~35 to set the NS level (dB), more NS level more aggressive\n");
 		printf("  \r     [NS_HPFEnable]=0/1 to enable the HPF before NS or not]");
-		printf("  \r     [NS_QuickConvergenceEnable]=0/1 to the NS convergence speed, immediately suppress(quick) 1, smooth suppress 0\n");
+		printf("  \r     [NS_SlowConvergence]=0~1000 to the NS convergence speed\n");
 		printf("  \r     Set extra speaker NS with NS level 3 by AUSPNS=1,3\n");
 		printf("  \r     Set extra speaker NS with NS level 3, wihtout HPF and quick drop by AUSPNS=1,3,0,1\n");
 		printf("  \r     Disable speaker NS by AUSPNS=0\n");
@@ -1263,12 +1263,12 @@ void fAUSPNS(void *arg)
 				tx_asp_params.ns_cfg.HPFEnable = atoi(argv[3]);
 			}
 			if (argc >= 5) {
-				tx_asp_params.ns_cfg.QuickConvergenceEnable = atoi(argv[4]);
+				tx_asp_params.ns_cfg.NSSlowConvergence = atoi(argv[4]);
 			}
 			tx_asp_params.ns_cfg.NS_EN = 1;
 			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_TXASP_PARAM, (int)&tx_asp_params);
 			printf("Enable speaker NS = %x, level %d, HPF %d, QuickConvergence %d\r\n", tx_asp_params.ns_cfg.NS_EN, tx_asp_params.ns_cfg.NSLevel,
-				   tx_asp_params.ns_cfg.HPFEnable, tx_asp_params.ns_cfg.QuickConvergenceEnable);
+				   tx_asp_params.ns_cfg.HPFEnable, tx_asp_params.ns_cfg.NSSlowConvergence);
 		} else {
 			tx_asp_params.ns_cfg.NS_EN = 0;
 			mm_module_ctrl(audio_save_ctx, CMD_AUDIO_SET_TXASP_PARAM, (int)&tx_asp_params);

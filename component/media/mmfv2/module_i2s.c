@@ -67,6 +67,16 @@ static uint16_t byteSwap16(uint16_t num)
 	return ((num >> 8) & 0x00FF) | ((num << 8) & 0xFF00);
 }
 
+static uint32_t byteCopy32(uint32_t num)
+{
+	return num;
+}
+
+static uint16_t byteCopy16(uint16_t num)
+{
+	return num;
+}
+
 static int i2s_samplerate2index(int samplerate)
 {
 	switch (samplerate) {
@@ -270,31 +280,31 @@ static int convert_rx_data(uint8_t *rx_buffer, const uint8_t *i2s_buffer, uint32
 	int i, j;
 	if (ctx->i2s_word_length == 32 && ctx->rx_word_length == 32) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			out_buf32[j] = byteSwap32(in_buf32[i]);
+			out_buf32[j] = ctx->rxbyteProc32(in_buf32[i]);
 			*i2s_byte -= in_wl;
 			*rx_byte -= out_byte_stride * out_idx_stride;
 		}
 	} else if (ctx->i2s_word_length == 32 && ctx->rx_word_length == 24) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			process_32_to_24(byteSwap32(in_buf32[i]), (int24_t *)(&out_buf8[out_byte_stride * j]));
+			process_32_to_24(ctx->rxbyteProc32(in_buf32[i]), (int24_t *)(&out_buf8[out_byte_stride * j]));
 			*i2s_byte -= in_wl;
 			*rx_byte -= out_byte_stride * out_idx_stride;
 		}
 	} else if (ctx->i2s_word_length == 32 && ctx->rx_word_length == 16) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			process_32_to_16(byteSwap32(in_buf32[i]), &out_buf16[j]);
+			process_32_to_16(ctx->rxbyteProc32(in_buf32[i]), &out_buf16[j]);
 			*i2s_byte -= in_wl;
 			*rx_byte -= out_byte_stride * out_idx_stride;
 		}
 	} else if (ctx->i2s_word_length == 24 && ctx->rx_word_length == 32) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			process_24h_to_32(byteSwap32(in_buf32[i]), &out_buf32[j]);
+			process_24h_to_32(ctx->rxbyteProc32(in_buf32[i]), &out_buf32[j]);
 			*i2s_byte -= in_wl;
 			*rx_byte -= out_byte_stride * out_idx_stride;
 		}
 	} else if (ctx->i2s_word_length == 24 && ctx->rx_word_length == 24) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			uint32_t temp24 = (uint32_t)(byteSwap32(in_buf32[i])) >> 8;
+			uint32_t temp24 = (uint32_t)(ctx->rxbyteProc32(in_buf32[i])) >> 8;
 			out_buf8[out_byte_stride * j + 0] = (uint8_t)(temp24 & 0xFF);
 			out_buf8[out_byte_stride * j + 1] = (uint8_t)((temp24 >> 8) & 0xFF);
 			out_buf8[out_byte_stride * j + 2] = (uint8_t)((temp24 >> 16) & 0xFF);
@@ -303,25 +313,25 @@ static int convert_rx_data(uint8_t *rx_buffer, const uint8_t *i2s_buffer, uint32
 		}
 	} else if (ctx->i2s_word_length == 24 && ctx->rx_word_length == 16) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			process_24h_to_16(byteSwap32(in_buf32[i]), &out_buf16[j]);
+			process_24h_to_16(ctx->rxbyteProc32(in_buf32[i]), &out_buf16[j]);
 			*i2s_byte -= in_wl;
 			*rx_byte -= out_byte_stride * out_idx_stride;
 		}
 	} else if (ctx->i2s_word_length == 16 && ctx->rx_word_length == 32) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			process_16_to_32(byteSwap16(in_buf16[i]), &out_buf32[j]);
+			process_16_to_32(ctx->rxbyteProc16(in_buf16[i]), &out_buf32[j]);
 			*i2s_byte -= in_wl;
 			*rx_byte -= out_byte_stride * out_idx_stride;
 		}
 	} else if (ctx->i2s_word_length == 16 && ctx->rx_word_length == 24) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			process_16_to_24(byteSwap16(in_buf16[i]), (int24_t *)(&out_buf8[out_byte_stride * j]));
+			process_16_to_24(ctx->rxbyteProc16(in_buf16[i]), (int24_t *)(&out_buf8[out_byte_stride * j]));
 			*i2s_byte -= in_wl;
 			*rx_byte -= out_byte_stride * out_idx_stride;
 		}
 	} else if (ctx->i2s_word_length == 16 && ctx->rx_word_length == 16) {
 		for (i = in_idx_start, j = 0; i < (in_byte / in_wl) && j < (out_byte / out_byte_stride); i += in_idx_stride, j += out_idx_stride) {
-			out_buf16[j] = byteSwap16(in_buf16[i]);
+			out_buf16[j] = ctx->rxbyteProc16(in_buf16[i]);
 			*i2s_byte -= in_wl;
 			*rx_byte -= out_byte_stride * out_idx_stride;
 		}
@@ -376,6 +386,8 @@ static int set_i2s_module_init(void *p)
 		ctx->pin_group_num = ctx->params.pin_group_num;
 		ctx->i2s_ws_edge = ctx->params.i2s_ws_edge;
 		ctx->i2s_data_edge = ctx->params.i2s_data_edge;
+		ctx->rxbyteProc32 = ctx->params.rx_byte_swap ? byteSwap32 : byteCopy32;
+		ctx->rxbyteProc16 = ctx->params.rx_byte_swap ? byteSwap16 : byteCopy16;
 		//I2S with word length only support stereo channel
 		if (ctx->i2s_word_length == 24 || ctx->rx_channel == I2S_STEREO_CHANNEL || ctx->tx_channel == I2S_STEREO_CHANNEL) {
 			ctx->i2s_channel = CH_STEREO;

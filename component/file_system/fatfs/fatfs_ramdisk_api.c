@@ -13,9 +13,9 @@
 #endif
 
 ////**** Implement the basic functions for RAM FatFs ****////
-#define RAM_DISK_SZIE 1024*1024*10
-#define SECTOR_SIZE_RAM		512
-#define SECTOR_COUNT_RAM (RAM_DISK_SZIE/512)	//4096  // File system volumes = SECTOR_SIZE_RAM * SECTOR_COUNT_RAM
+#define RAM_DISK_SIZE       (1024 * 1024 * 10)
+#define SECTOR_SIZE_RAM     512
+#define SECTOR_COUNT_RAM    (RAM_DISK_SIZE / SECTOR_SIZE_RAM) // File system volumes = SECTOR_SIZE_RAM * SECTOR_COUNT_RAM
 
 static char *diskMem = NULL;
 
@@ -150,7 +150,9 @@ int fatfs_ram_close()
 
 		fatfs_ram_init_done = 0;
 
-		free(diskMem);
+		if (diskMem) {
+			free(diskMem);
+		}
 	}
 	return 0;
 }
@@ -161,7 +163,13 @@ int fatfs_ram_init(void)
 	int ret = 0;
 
 	if (!fatfs_ram_init_done) {
-		diskMem = (char *)malloc(sizeof(char) * SECTOR_SIZE_RAM * SECTOR_COUNT_RAM); // malloc 2MB ram memory size for file system
+		diskMem = (char *)malloc(sizeof(char) * SECTOR_SIZE_RAM * SECTOR_COUNT_RAM);
+
+		if (!diskMem) {
+			ret = -1;
+			goto fatfs_init_err;
+		}
+
 		memset(diskMem, 0, sizeof(char)*SECTOR_SIZE_RAM * SECTOR_COUNT_RAM);
 
 		int Fatfs_ok = 0;

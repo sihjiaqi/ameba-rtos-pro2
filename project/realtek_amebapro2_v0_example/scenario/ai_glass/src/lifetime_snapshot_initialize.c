@@ -14,6 +14,7 @@
 #include "ai_glass_media.h"
 #include "module_filesaver.h"
 #include "nv12tojpg.h"
+#include "media_filesystem.h"
 
 #define LIFE_SNAP_PRIORITY      5
 #define MAXIMUM_FILE_TAG_SIZE   32
@@ -48,6 +49,7 @@ static int is_file_saved = LIFESNAP_IDLE;
 #define BSIZE 1000
 static void lifetime_snapshot_file_save(char *file_path, uint32_t data_addr, uint32_t data_size)
 {
+	uint8_t *output_jpg_buf = NULL;
 	printf("file_path:%s  data_addr:%ld  data_size:%ld \r\n", file_path, data_addr, data_size);
 	if (is_file_saved == LIFESNAP_TAKE) {
 		int ret = 0;
@@ -69,7 +71,7 @@ static void lifetime_snapshot_file_save(char *file_path, uint32_t data_addr, uin
 			input_nv12_buf = (uint8_t *)data_addr;
 		}
 
-		uint8_t *output_jpg_buf = malloc(nv12_size);
+		output_jpg_buf = malloc(nv12_size);
 		if (!output_jpg_buf) {
 			printf("allocate jpg buffer size %ld fail\r\n", nv12_size);
 			ret = -1;

@@ -130,6 +130,8 @@ int video_voe_presetting(int v1_enable, int v1_w, int v1_h, int v1_bps, int v1_s
 
 int video_voe_presetting_by_params(const void *v1_params, int v1_jpg_only_shapshot, const void *v2_params, int v2_jpg_only_shapshot, const void *v3_params,
 								   int v3_jpg_only_shapshot, const void *v4_params);
+								   
+int video_extra_voe_presetting(int originl_heapsize, int vext_enable, int vext_w, int vext_h, int vext_bps, int vext_shapshot);
 
 void video_voe_release(void);
 void video_set_sensor_id(int SensorName);

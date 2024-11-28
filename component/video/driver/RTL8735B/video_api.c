@@ -900,6 +900,34 @@ int video_buf_heap_calc(int v1_enable, int v1_w, int v1_h, int v1_bps, int v1_en
 	return voe_heap_size;
 }
 
+int video_extra_buf_calc(int originl_heapsize, int vext_enable, int vext_w, int vext_h, int vext_bps, int vext_shapshot)
+{
+	int voe_heap_size = originl_heapsize;
+	if (vext_enable) {
+		//ISP buffer
+		voe_heap_size += ((vext_w * vext_h * 3) / 2) * isp_ch_buf_num[3];
+		//ISP common
+		voe_heap_size += ISP_CREATE_BUF;
+		//enc ref
+		voe_heap_size += ((vext_w * vext_h * 3) / 2) * 2 + (vext_w * vext_h / 16) * 2;
+		//enc common
+		voe_heap_size += ENC_CREATE_BUF;
+		//enc buffer (may need modify by codec type)
+		voe_heap_size += ((vext_w * vext_h) / VIDEO_RSVD_DIVISION + (vext_bps * VEXT_ENC_BUF_SIZE) / 8);
+		//g_enc_buff_size[3] = ((vext_w * vext_h) / VIDEO_RSVD_DIVISION + (vext_bps * VEXT_ENC_BUF_SIZE) / 8);
+		//shapshot
+		if (vext_shapshot) {
+			voe_heap_size += ((vext_w * vext_h * 3) / 2) + SNAPSHOT_BUF;
+		}
+	}
+
+	video_dprintf(VIDEO_LOG_INF, "vext = %d,%d,%d\r\n", vext_w, vext_h, voe_heap_size);
+
+	video_set_voe_heap((int)NULL, voe_heap_size, 1);
+
+	return voe_heap_size;
+}
+
 void video_buf_release(void)
 {
 	if (video_open_status() != 0) {

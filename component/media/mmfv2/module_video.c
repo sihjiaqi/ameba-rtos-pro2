@@ -1186,6 +1186,17 @@ int video_voe_presetting_by_params(const void *v1_params, int v1_jpg_only_shapsh
 	return voe_heap_size;
 }
 
+int video_extra_voe_presetting(int originl_heapsize, int vext_enable, int vext_w, int vext_h, int vext_bps, int vext_shapshot)
+{
+	int voe_heap_size = 0;
+
+	vext_w = (vext_w + 15) & ~15;
+
+	voe_heap_size =  video_extra_buf_calc(originl_heapsize, vext_enable, vext_w, vext_h, vext_bps, vext_shapshot);
+
+	return voe_heap_size;
+}
+
 void video_voe_release(void)
 {
 	video_buf_release();

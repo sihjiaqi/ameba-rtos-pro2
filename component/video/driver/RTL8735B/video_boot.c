@@ -228,6 +228,30 @@ int video_boot_buf_calc(video_boot_stream_t vidoe_boot)
 		//ISP common
 		vidoe_boot.voe_heap_size += ISP_CREATE_BUF;
 	}
+
+	if (vidoe_boot.extra_video_enable) {
+		vidoe_boot.voe_heap_size += ((vidoe_boot.extra_video_params.width * vidoe_boot.extra_video_params.height * 3) / 2) * video_boot_slot_num[STREAM_ID_VEXTRA];
+		//ISP common
+		vidoe_boot.voe_heap_size += ISP_CREATE_BUF;
+		//enc ref
+		vidoe_boot.voe_heap_size += ((vidoe_boot.extra_video_params.width * vidoe_boot.extra_video_params.height * 3) / 2) * 2 +
+									(vidoe_boot.extra_video_params.width * vidoe_boot.extra_video_params.height / 16) * 2;
+		//enc common
+		vidoe_boot.voe_heap_size += ENC_CREATE_BUF;
+		//enc buffer
+		enc_buf_size_len = VEXT_ENC_BUF_SIZE;
+
+		enc_buf_size = ((vidoe_boot.extra_video_params.width * vidoe_boot.extra_video_params.height) / VIDEO_RSVD_DIVISION +
+						(vidoe_boot.extra_video_params.bps * enc_buf_size_len) / 8);
+		vidoe_boot.voe_heap_size += enc_buf_size;
+		video_boot_stream.extra_video_params.out_buf_size = enc_buf_size;
+		dbg_printf("channel %d size %d\r\n", i, video_boot_stream.extra_video_params.out_buf_size);
+		//shapshot
+		if (vidoe_boot.extra_video_snapshot) {
+			vidoe_boot.voe_heap_size += ((vidoe_boot.extra_video_params.width * vidoe_boot.extra_video_params.height * 3) / 2) + SNAPSHOT_BUF;
+		}
+	}
+
 	if (vidoe_boot.voe_heap_size % 32 == 0) {
 		vidoe_boot.voe_heap_size = vidoe_boot.voe_heap_size;
 	} else {
@@ -319,6 +343,9 @@ int video_boot_open(int ch_index, video_boot_params_t *v_stream)
 		break;
 	case 2:
 		out_buf_size = (v_stream->bps * V3_ENC_BUF_SIZE) / 8 + out_rsvd_size;
+		break;
+	case 3:
+		out_buf_size = (v_stream->bps * VEXT_ENC_BUF_SIZE) / 8 + out_rsvd_size;
 		break;
 	}
 

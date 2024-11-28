@@ -360,6 +360,7 @@ log_item_t at_power_save_items[ ] = {
 void main(void)
 {
 	uint32_t pm_reason = Get_wake_reason();
+	uint8_t suspend_fail = 0;
 	printf("\n\rpm_reason=0x%x\n\r", pm_reason);
 
 	hal_xtal_divider_enable(1);
@@ -447,7 +448,6 @@ void main(void)
 			}
 		} else if (pm_reason & BIT(6)) {
 			//wakeup by suspend fail
-			uint8_t suspend_fail = 0;
 			uint8_t suspend_wakeup = 0;
 			extern uint8_t rtw_hal_wowlan_get_suspend_wakeup_reason(void);
 			extern uint8_t rtw_hal_wowlan_get_suspend_fail(void);
@@ -460,6 +460,38 @@ void main(void)
 					printf("\r\nunicast wakeup!!\r\n");
 					unicast_wakeup = 1;
 					wlan_mcu_ok = 1;
+
+					uint32_t packet_len = 0;
+					extern u8 *rtw_hal_wowlan_get_suspend_wakeup_pattern(u32 * packet_len);
+					uint8_t *wakeup_packet = rtw_hal_wowlan_get_suspend_wakeup_pattern(&packet_len);
+
+					// parse wakeup packet
+					uint8_t *ip_header = NULL;
+
+					for (int i = 0; i < packet_len - 4; i ++) {
+						if ((memcmp(wakeup_packet + i, &retention_local_ip, 4) == 0) && (*(wakeup_packet + i - 16) == 0x45)) {
+							ip_header = wakeup_packet + i - 16;
+							break;
+						}
+					}
+
+					if (ip_header) {
+						uint16_t ip_len = (((uint16_t) ip_header[2]) << 8) | ((uint16_t) ip_header[3]);
+						uint32_t wakeup_eth_packet_len = 6 + 6 + (ip_len + 2);
+						uint8_t *wakeup_eth_packet = (uint8_t *) malloc(wakeup_eth_packet_len);
+						if (wakeup_eth_packet) {
+							memcpy(wakeup_eth_packet, wakeup_packet + 4, 6);
+							memcpy(wakeup_eth_packet + 6, wakeup_packet + 16, 6);
+							memcpy(wakeup_eth_packet + 12, ip_header - 2, ip_len + 2);
+
+							extern int lwip_set_wakeup_packet(uint8_t *packet, uint32_t packet_len);
+							lwip_set_wakeup_packet(wakeup_eth_packet, wakeup_eth_packet_len);
+
+							free(wakeup_eth_packet);
+						}
+					}
+
+					free(wakeup_packet);
 				} else if (suspend_wakeup == 0) {
 					wlan_mcu_ok = 1;
 				}
@@ -475,8 +507,10 @@ void main(void)
 		if (wlan_mcu_ok && (rtw_hal_wlan_resume_check() == 1)) {
 			wlan_resume = 1;
 			extern int rtw_hal_read_aoac_rpt_from_txfifo(u8 * buf, u16 addr, u16 len);
-			if (rtw_hal_read_aoac_rpt_from_txfifo(NULL, 0, 0) == 0) {
-				wlan_resume = 0;
+			if (suspend_fail == 0) {
+				if ((rtw_hal_read_aoac_rpt_from_txfifo(NULL, 0, 0) == 0)) {
+					wlan_resume = 0;
+				}
 			}
 		}
 	}

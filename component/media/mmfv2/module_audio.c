@@ -1871,7 +1871,7 @@ RX_cfg_t default_rx_asp_params = {
 		.NS_EN = 0,
 		.NSLevel = 5,
 		.HPFEnable = 0,
-		.QuickConvergenceEnable = 0,
+		.NSSlowConvergence = 200,
 	},
 	.post_mute = 0,
 };
@@ -1895,7 +1895,7 @@ TX_cfg_t default_tx_asp_params = {
 		.NS_EN = 0,
 		.NSLevel = 5,
 		.HPFEnable = 0,
-		.QuickConvergenceEnable = 0,
+		.NSSlowConvergence = 200,
 	},
 	.post_mute = 0,
 };

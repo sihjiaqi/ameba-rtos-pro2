@@ -14,7 +14,9 @@
 #include "platform_stdlib.h"
 #include "media_filesystem.h"
 #include "time.h"
-#include "ff.h"
+//#include "ff.h"
+#include "vfs.h"
+#include "mmf2_mediatime_8735b.h"
 
 #define SHOW_LIST_FILE_TIME 0
 #define ENABLE_FILE_TIME_FUNCTION   1 // If enable this flag, please set original get_fattime to weak function
@@ -34,12 +36,12 @@ static time_t gps_timeinfo = 0;
 time_t media_filesystem_gpstime_to_time_t(uint32_t gps_week, uint32_t gps_seconds);
 
 #if ENABLE_FILE_TIME_FUNCTION
-DWORD get_fattime(void)
+unsigned long get_fattime(void)
 {
 	time_t cur_time = gps_timeinfo + mm_read_mediatime_ms() / 1000;
 	struct tm *timeinfo = gmtime(&cur_time);
 
-	DWORD time_abs = 0;
+	unsigned long time_abs = 0;
 	time_abs |= ((timeinfo->tm_year - 80) & 0x7F) << 25;
 	time_abs |= ((timeinfo->tm_mon + 1) & 0x0F) << 21;
 	time_abs |= (timeinfo->tm_mday & 0x1F) << 16;
@@ -199,17 +201,17 @@ void extdisk_generate_unique_filename(const char *base_name, const char *time_st
 
 static void extdisk_get_filenum(const char *dir_path, const char **extensions, uint16_t *ext_counts, uint16_t num_extensions, const char *exclude_filename)
 {
-	DIR *m_dir;
+	DIR *file_dir = NULL;
 	char *filename;
 	dirent *entry;
 	//printf("survey dir: %s\r\n", dir_path);
 	uint8_t *sub_dir_path = malloc(PATH_MAX + 1);
-	m_dir = opendir(dir_path);
+	file_dir = opendir(dir_path);
 
-	if (m_dir) {
+	if (file_dir) {
 		for (;;) {
 			// read directory
-			entry = readdir(m_dir);
+			entry = readdir(file_dir);
 
 			if (!entry) {
 				break;
@@ -236,7 +238,7 @@ static void extdisk_get_filenum(const char *dir_path, const char **extensions, u
 			}
 		}
 		// close directory
-		closedir(m_dir);
+		closedir(file_dir);
 	}
 	if (sub_dir_path) {
 		free(sub_dir_path);
@@ -392,7 +394,7 @@ static cJSON *get_filelist(const char *list_path, const char *folder_name, uint1
 						   const char *exclude_filename)
 {
 	//int res = 0;
-	DIR *m_dir;
+	DIR *file_dir;
 	char *filename;
 	dirent *entry;
 	uint8_t *sub_dir_path = malloc(PATH_MAX + 1);
@@ -403,14 +405,14 @@ static cJSON *get_filelist(const char *list_path, const char *folder_name, uint1
 		goto endoffun;
 	}
 
-	m_dir = opendir(list_path);
+	file_dir = opendir(list_path);
 
-	if (m_dir) {
+	if (file_dir) {
 		cJSON *contents = cJSON_CreateArray();
 		// each folder
 		for (;;) {
 			// read directory
-			entry = readdir(m_dir);
+			entry = readdir(file_dir);
 
 			if (!entry) {
 				break;
@@ -446,7 +448,7 @@ static cJSON *get_filelist(const char *list_path, const char *folder_name, uint1
 		}
 		cJSON_AddItemToObject(filelist_obj, "contents", contents);
 		// close directory
-		closedir(m_dir);
+		closedir(file_dir);
 	}
 endoffun:
 	if (sub_dir_path) {

@@ -365,7 +365,7 @@ int media_update_ai_snapshot_params(const ai_glass_snapshot_param_t *params)
 		ftl_common_write(flash_addr, ai_snap_buf, 2048);
 		memset(ai_snap_buf, 0xff, 2048);
 		ftl_common_read(flash_addr, ai_snap_buf, 2048);
-		ai_glass_snapshot_param_t *read_data = (ai_glass_record_param_t *)(ai_snap_buf + 6);
+		ai_glass_snapshot_param_t *read_data = (ai_glass_snapshot_param_t *)(ai_snap_buf + 6);
 		printf("[FLASH_AISNAP]type: %u, width: %u, height:%u, jpeg_qlevel: %u, roi_xmin: %u, roi_ymin: %u, roi_xmax: %u, roi_ymax: %u, minQp: %u, maxQp: %u, rotation: %u\r\n",
 			   read_data->type, read_data->width, read_data->height, read_data->jpeg_qlevel, read_data->roi.xmin, read_data->roi.ymin, read_data->roi.xmax,
 			   read_data->roi.ymax, read_data->minQp, read_data->maxQp, read_data->rotation);
@@ -407,7 +407,7 @@ int media_update_life_snapshot_params(const ai_glass_snapshot_param_t *params)
 		ftl_common_write(flash_addr, lifetime_snap_buf, 2048);
 		memset(lifetime_snap_buf, 0xff, 2048);
 		ftl_common_read(flash_addr, lifetime_snap_buf, 2048);
-		ai_glass_snapshot_param_t *read_data = (ai_glass_record_param_t *)(lifetime_snap_buf + 8);
+		ai_glass_snapshot_param_t *read_data = (ai_glass_snapshot_param_t *)(lifetime_snap_buf + 8);
 		printf("[FLASH_LIFESNAP]type: %u, width: %u, height:%u, jpeg_qlevel: %u, roi_xmin: %u, roi_ymin: %u, roi_xmax: %u, roi_ymax: %u, minQp: %u, maxQp: %u, rotation: %u\r\n",
 			   read_data->type, read_data->width, read_data->height, read_data->jpeg_qlevel, read_data->roi.xmin, read_data->roi.ymin, read_data->roi.xmax,
 			   read_data->roi.ymax, read_data->minQp, read_data->maxQp, read_data->rotation);

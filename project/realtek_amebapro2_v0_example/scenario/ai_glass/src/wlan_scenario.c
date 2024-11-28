@@ -223,6 +223,20 @@ int wifi_get_ap_setting(rtw_softap_info_t *wifi_cfg)
 	return WLAN_SET_FAIL;
 }
 
+int wifi_disable_ap_mode(void);
+
+static void deinit_dhcp(void)
+{
+	// Enable Wi-Fi with AP mode
+#if CONFIG_LWIP_LAYER
+	dhcps_deinit();
+	uint32_t addr = WIFI_MAKEU32(AI_GLASS_AP_IP_ADDR0, AI_GLASS_AP_IP_ADDR1, AI_GLASS_AP_IP_ADDR2, AI_GLASS_AP_IP_ADDR3);
+	uint32_t netmask = WIFI_MAKEU32(AI_GLASS_AP_NETMASK_ADDR0, AI_GLASS_AP_NETMASK_ADDR1, AI_GLASS_AP_NETMASK_ADDR2, AI_GLASS_AP_NETMASK_ADDR3);
+	uint32_t gw = WIFI_MAKEU32(AI_GLASS_AP_GW_ADDR0, AI_GLASS_AP_GW_ADDR1, AI_GLASS_AP_GW_ADDR2, AI_GLASS_AP_GW_ADDR3);
+	LwIP_SetIP(0, addr, netmask, gw);
+#endif
+}
+
 int wifi_enable_ap_mode(const char *ssid, const char *password, int channel, int timeout)
 {
 	printf("AI glass wifi_enable_ap_mode\r\n");
@@ -236,18 +250,29 @@ int wifi_enable_ap_mode(const char *ssid, const char *password, int channel, int
 #endif
 #endif
 
-	// Enable Wi-Fi with AP mode
-#if CONFIG_LWIP_LAYER
-	dhcps_deinit();
-	uint32_t addr = WIFI_MAKEU32(AI_GLASS_AP_IP_ADDR0, AI_GLASS_AP_IP_ADDR1, AI_GLASS_AP_IP_ADDR2, AI_GLASS_AP_IP_ADDR3);
-	uint32_t netmask = WIFI_MAKEU32(AI_GLASS_AP_NETMASK_ADDR0, AI_GLASS_AP_NETMASK_ADDR1, AI_GLASS_AP_NETMASK_ADDR2, AI_GLASS_AP_NETMASK_ADDR3);
-	uint32_t gw = WIFI_MAKEU32(AI_GLASS_AP_GW_ADDR0, AI_GLASS_AP_GW_ADDR1, AI_GLASS_AP_GW_ADDR2, AI_GLASS_AP_GW_ADDR3);
-	LwIP_SetIP(0, addr, netmask, gw);
-#endif
 	printf("AI glass Enable Wi-Fi with AP mode\r\n");
-	if (wifi_on(RTW_MODE_AP) < 0) {
-		printf("AI glass ERROR: wifi_on failed\r\n");
-		return WLAN_SET_FAIL;
+	extern rtw_mode_t wifi_mode;
+	if (wifi_mode == RTW_MODE_AP && wifi_is_running(WLAN0_IDX)) {
+		if (strncmp((const char *)softAP_config.ssid.val, (const char *)ssid, softAP_config.ssid.len) == 0 &&
+			strncmp((const char *)softAP_config.password, (const char *)password, softAP_config.password_len) == 0) {
+			goto set_http;
+		} else {
+			wifi_disable_ap_mode();
+			deinit_dhcp();
+		}
+	} else {
+		deinit_dhcp();
+		if (wifi_is_running(WLAN0_IDX)) {
+			if (wifi_set_mode(RTW_MODE_AP) < 0) {
+				printf("AI glass ERROR: wifi change mode failed\r\n");
+				return WLAN_SET_FAIL;
+			}
+		} else {
+			if (wifi_on(RTW_MODE_AP) < 0) {
+				printf("AI glass ERROR: wifi_on failed\r\n");
+				return WLAN_SET_FAIL;
+			}
+		}
 	}
 
 	// Start AP
@@ -296,6 +321,7 @@ int wifi_enable_ap_mode(const char *ssid, const char *password, int channel, int
 	httpd_reg_page_callback((char *)"/media-list", media_list_cb);
 	httpd_reg_page_callback((char *)"/media/*", media_getfile_cb);
 
+set_http:
 	if (!httpd_is_running()) {
 		if (httpd_start(8080, 5, 4096, HTTPD_THREAD_SINGLE, HTTPD_SECURE_NONE) != 0) {
 			printf("ERROR: httpd_start");

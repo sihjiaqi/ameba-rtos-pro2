@@ -347,12 +347,17 @@ static void gyro_read_gsensor(void *parm)
 	printf("Read end G-sensor %lu, read_cnt = %d\r\n", mm_read_mediatime_ms(), read_cnt);
 }
 
+static int set_stop = 0;
 static void vGensorTimeCallback(TimerHandle_t xTimer)
 {
-	if (gsensor_timer != NULL) {
-		gyro_read_gsensor(NULL);
-		if (xTimerStart(xTimer, 0) != pdPASS) {
-			printf("Reload G-sensor read timer\r\n");
+	if (set_stop == 0) {
+		if (gsensor_timer != NULL) {
+			gyro_read_gsensor(NULL);
+			if (gsensor_timer != NULL && set_stop == 0) {
+				if (xTimerStart(gsensor_timer, 0) != pdPASS) {
+					printf("Reload G-sensor read timer\r\n");
+				}
+			}
 		}
 	}
 }
@@ -361,6 +366,7 @@ int lr_gyro_deinit(void)
 {
 	if (gsensor_timer != NULL) {
 		xTimerStop(gsensor_timer, 0);
+		set_stop = 1;
 		if (xTimerDelete(gsensor_timer, 0) == pdPASS) {
 			gsensor_timer = NULL;
 		}
@@ -464,6 +470,7 @@ static int lr_mp4_error_cb(void *parm)
 void lifetime_recording_initialize(void)
 {
 	printf("================LifeTime Record start==========================\r\n");
+	ai_glass_record_param_t *ai_record_param = NULL;
 #if ENABLE_GET_GSENSOR_INFO
 	// Initial G-sensor
 	if (lr_gyro_init()) {
@@ -471,7 +478,6 @@ void lifetime_recording_initialize(void)
 	}
 #endif
 
-	ai_glass_record_param_t *ai_record_param = NULL;
 	ai_record_param = (ai_glass_record_param_t *) malloc(sizeof(ai_glass_record_param_t));
 	memset(ai_record_param, 0x00, sizeof(ai_glass_record_param_t));
 	media_get_record_params(ai_record_param);
@@ -491,7 +497,7 @@ void lifetime_recording_initialize(void)
 	lr_video_params.height = ai_record_param->height;
 	lr_video_params.rc_mode = ai_record_param->rc_mode;
 
-	char *cur_time_str = media_filesystem_get_current_time_string();
+	char *cur_time_str = (char *)media_filesystem_get_current_time_string();
 	//snprintf((char *)life_recording_name, sizeof(life_recording_name), "liferecord_%s", cur_time_str);
 	extdisk_generate_unique_filename("liferecord_", cur_time_str, ".mp4", life_recording_name, 128);
 	free(cur_time_str);
@@ -652,8 +658,8 @@ void lifetime_recording_deinitialize(void)
 	lr_miso_video_aac_mp4 = NULL;
 
 	//Close module
-	//mm_module_close(lr_audio_ctx);
-	//lr_audio_ctx = NULL;
+	mm_module_close(lr_audio_ctx);
+	lr_audio_ctx = NULL;
 	mm_module_close(lr_aac_ctx);
 	lr_aac_ctx = NULL;
 	mm_module_close(lr_mp4_ctx);

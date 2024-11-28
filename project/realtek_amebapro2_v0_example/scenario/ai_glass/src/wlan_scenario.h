@@ -30,7 +30,7 @@
 #define AI_GLASS_AP_SSID        "AI_GLASS_AP"
 
 // AP password
-#define AI_GLASS_AP_PASSWORD    "12345678"
+#define AI_GLASS_AP_PASSWORD    "rtkaiglass"
 
 // AP channel
 #define AI_GLASS_AP_CHANNEL     6

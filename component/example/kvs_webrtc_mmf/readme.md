@@ -39,20 +39,6 @@
     ```
     #define LWIP_IPV6       1
     ```
-    
-## Enlarge SKB buffer number
-- go to `component/wifi/driver/src/core/option/rtw_opt_skbuf_rtl8735b.c`  
-    ```
-    #define MAX_SKB_BUF_NUM      1024
-    ```
-
-## No using the wrapper function for snprintf 
-- In `project/realtek_amebapro2_v0_example/GCC-RELEASE/toolchain.cmake`, comment the following wrapper function
-    ```
-    # "-Wl,-wrap,sprintf"
-    # "-Wl,-wrap,snprintf"
-    # "-Wl,-wrap,vsnprintf"
-    ```
 
 ## Congiure the example
 - configure AWS key channel name in `component/example/kvs_webrtc_mmf/sample_config_webrtc.h`

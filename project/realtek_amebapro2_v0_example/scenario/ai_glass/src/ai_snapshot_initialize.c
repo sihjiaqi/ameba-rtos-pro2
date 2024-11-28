@@ -6,6 +6,7 @@
 #include "video_snapshot.h"
 #include "sensor.h"
 #include "ai_glass_media.h"
+#include "media_filesystem.h"
 
 typedef struct {
 	uint8_t *output_buffer;
@@ -25,7 +26,7 @@ typedef struct {
 	video_params_t video_snapshot_params;
 	jpeg_buffer_t video_buf;
 	mm_context_t *video_snapshot_ctx;
-	int (*snapshot_write)(uint8_t *buf, uint32_t len, char *filename);
+	int (*snapshot_write)(uint8_t *buf, uint32_t len, const char *filename);
 } jpeg_aisnapshot_context_t;
 
 // static video_params_t ai_video_params;
@@ -44,7 +45,7 @@ static int video_snapshot_cb(uint32_t jpeg_addr, uint32_t jpeg_len)
 {
 	ai_snap_ctx->take_snapshot = 1;
 	printf("capture_snapshot_cb snapshot size = %lu\n\r", jpeg_len);
-	ai_snap_ctx->dest_addr = (uint8_t *) malloc(jpeg_len);
+	ai_snap_ctx->dest_addr = (uint32_t) malloc(jpeg_len);
 	memcpy((void *)ai_snap_ctx->dest_addr, (const void *)jpeg_addr, jpeg_len);
 	ai_snap_ctx->dest_actual_len = jpeg_len;
 	printf("capture_snapshot_cb snapshot addr = %ld, size = %lu\n\r", ai_snap_ctx->dest_addr, ai_snap_ctx->dest_actual_len);
@@ -67,7 +68,7 @@ static int video_snapshot_get_buffer(jpeg_buffer_t *video_buf, uint32_t timeout_
 	}
 }
 
-static int video_capture_snapshot(char *filename)
+static int video_capture_snapshot(const char *filename)
 {
 	int ret = -1;
 	if (!video_snapshot_get_buffer(&ai_snap_ctx->video_buf, SNAPSHOT_TIMEOUT)) {
@@ -83,7 +84,7 @@ static int video_capture_snapshot(char *filename)
 	return ret;
 }
 
-static int aisnapshot_write_picture(uint8_t *buf, uint32_t len, char *filename)
+static int aisnapshot_write_picture(uint8_t *buf, uint32_t len, const char *filename)
 {
 	FILE *m_file = NULL;
 	//printf("jpeg %s, file len = %u\r\n", filename, len);

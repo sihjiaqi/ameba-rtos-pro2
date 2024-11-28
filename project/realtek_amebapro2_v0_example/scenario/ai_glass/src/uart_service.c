@@ -20,8 +20,9 @@
 #define UART_CMD_PRIORITY       5
 #define UART_CRITICAL_PRIORITY  7
 #define UART_ACK_PRIORITY       8
+#define UART_RECV_PRIORITY      8
 
-#define UART_THREAD_NUM         3 // The thread num for uart common command
+#define UART_THREAD_NUM         3       // The thread num for uart common command
 
 // UART infomation for both ic to sync
 uint8_t uart_protocal_version = UART_PROTOCAL_VER;
@@ -32,24 +33,26 @@ uint8_t uart_wifi_ic_type = UART_WIFI_IC_TYPE;
 //
 static TaskHandle_t uartcmdtask[UART_THREAD_NUM] = {0};
 static TaskHandle_t uartcrticaltask = NULL;
+static TaskHandle_t uartacktask = NULL;
+static TaskHandle_t uartrecvtask = NULL;
 
-static QueueHandle_t rx_uart_recycle = NULL;		    // This queue is for rx uart recycle
-static QueueHandle_t rx_uart_ready = NULL;			    // This queue is for rx uart ready
-static QueueHandle_t tx_uart_recycle = NULL;		    // This queue is for tx uart recycle
-static QueueHandle_t tx_uart_ready = NULL;			    // This queue is for tx uart ready
+static QueueHandle_t rx_uart_recycle = NULL;            // This queue is for rx uart recycle
+static QueueHandle_t rx_uart_ready = NULL;              // This queue is for rx uart ready
+static QueueHandle_t tx_uart_recycle = NULL;            // This queue is for tx uart recycle
+static QueueHandle_t tx_uart_ready = NULL;              // This queue is for tx uart ready
 
-static QueueHandle_t rx_critical_recycle = NULL;	    // This queue is for rx critical recycle
-static QueueHandle_t rx_critical_ready = NULL;		    // This queue is for rx critical ready
-static QueueHandle_t tx_critical_recycle = NULL;	    // This queue is for tx critical recycle
-static QueueHandle_t tx_critical_ready = NULL;		    // This queue is for tx critical ready
+static QueueHandle_t rx_critical_recycle = NULL;        // This queue is for rx critical recycle
+static QueueHandle_t rx_critical_ready = NULL;          // This queue is for rx critical ready
+static QueueHandle_t tx_critical_recycle = NULL;        // This queue is for tx critical recycle
+static QueueHandle_t tx_critical_ready = NULL;          // This queue is for tx critical ready
 
-static QueueHandle_t rx_uart_ack_recycle = NULL;	    // This queue is for rx uart ack recycle
-static QueueHandle_t rx_uart_ack_ready = NULL;		    // This queue is for rx uart ack ready
+static QueueHandle_t rx_uart_ack_recycle = NULL;        // This queue is for rx uart ack recycle
+static QueueHandle_t rx_uart_ack_ready = NULL;          // This queue is for rx uart ack ready
 
 static QueueHandle_t rx_uart_ack_tmp_recycle = NULL;    // This queue is for rx uart ack ready
 
-static QueueHandle_t tx_uart_ack_recycle = NULL;	    // This queue is for tx uart ack recycle
-static QueueHandle_t tx_uart_ack_ready = NULL;		    // This queue is for tx uart ack ready
+static QueueHandle_t tx_uart_ack_recycle = NULL;        // This queue is for tx uart ack recycle
+static QueueHandle_t tx_uart_ack_ready = NULL;          // This queue is for tx uart ack ready
 
 static SemaphoreHandle_t uart_tx_free_sema = NULL;
 
@@ -72,6 +75,83 @@ static CallbackEntry_t uartcmdcb_table[UART_UART_CMD_COUNT];
 // Buffer for DMA
 static uint8_t uart_txbuf[UART_MAX_PIC_SIZE] __attribute__((aligned(32))) = {0};
 //static uint8_t uart_rxbuf[UART_MAX_PIC_SIZE] __attribute__((aligned(32))) = {0};
+
+typedef struct {
+	uint8_t *buffer;
+	uint32_t size;
+	uint16_t write_index;
+	uint16_t read_index;
+} ring_buffer_t;
+
+static ring_buffer_t *uart_rb = NULL;
+static SemaphoreHandle_t rx_data_sema = NULL;
+volatile static bool rx_data_available = false;
+
+static ring_buffer_t *ring_buffer_init(uint16_t size)
+{
+	ring_buffer_t *rb = (ring_buffer_t *)malloc(sizeof(ring_buffer_t));
+	if (rb == NULL) {
+		return NULL;
+	}
+
+	rb->buffer = (uint8_t *)malloc(size * sizeof(uint8_t));
+	if (rb->buffer == NULL) {
+		free(rb);
+		return NULL;
+	}
+
+	rb->size = size;
+	rb->write_index = 0;
+	rb->read_index = 0;
+	return rb;
+}
+
+static void ring_buffer_free(ring_buffer_t *rb)
+{
+	free(rb->buffer);
+	rb->buffer = NULL;
+}
+
+static bool ring_buffer_is_empty(ring_buffer_t *rb)
+{
+	return (rb->write_index == rb->read_index);
+}
+
+static bool ring_buffer_is_full(ring_buffer_t *rb)
+{
+	return ((rb->write_index + 1) % rb->size == rb->read_index);
+}
+
+static bool ring_buffer_write_word(ring_buffer_t *rb, uint8_t data)
+{
+	if (ring_buffer_is_full(rb)) {
+		return false;
+	}
+
+	rb->buffer[rb->write_index] = data;
+	rb->write_index = (rb->write_index + 1) % rb->size;
+	return true;
+}
+
+static bool ring_buffer_read_word(ring_buffer_t *rb, uint8_t *data)
+{
+	if (ring_buffer_is_empty(rb)) {
+		return false;
+	}
+
+	*data = rb->buffer[rb->read_index];
+	rb->read_index = (rb->read_index + 1) % rb->size;
+	return true;
+}
+
+static int ring_buffer_read_sequence(ring_buffer_t *rb, uint8_t *buf, uint32_t len)
+{
+	uint32_t count = 0;
+	while (!ring_buffer_is_empty(rb) && count < len) {
+		ring_buffer_read_word(rb, &buf[count++]);
+	}
+	return count;
+}
 
 static uint8_t CalculateChecksum(uint8_t sync_word, uint8_t seq_number, uint16_t resp_opcode, uart_params_t *params_array, uint16_t *length)
 {
@@ -333,7 +413,7 @@ static int CreateTxUartQueue(int queue_length, int critical_queue_length, int ac
 static int SendAck(uint8_t recv_seq_number, uint16_t recv_opcode, uint8_t status)
 {
 	uartackpacket_t *ack_packet;
-	int ret = xQueueReceiveFromISR(tx_uart_ack_recycle, (void *)&ack_packet, 0);
+	int ret = xQueueReceive(tx_uart_ack_recycle, (void *)&ack_packet, 0);
 	if (!IS_VALID_UART_CMD(recv_opcode)) {
 		printf("[UART WARNING] Received cmd packet with invalid opcode 0x%04x\r\n", recv_opcode);
 	}
@@ -344,7 +424,7 @@ static int SendAck(uint8_t recv_seq_number, uint16_t recv_opcode, uint8_t status
 		ack_packet->recv_opcode = recv_opcode;
 		ack_packet->status = status;
 
-		if (xQueueSendFromISR(tx_uart_ack_ready, (void *)&ack_packet, 0) != pdPASS) {
+		if (xQueueSend(tx_uart_ack_ready, (void *)&ack_packet, 0) != pdPASS) {
 			printf("[UART ERROR] Failed to ready ack_packet\r\n");
 			return UART_SEND_PACKET_FAIL;
 		}
@@ -357,8 +437,7 @@ static int SendAck(uint8_t recv_seq_number, uint16_t recv_opcode, uint8_t status
 	return UART_OK; // Return success code if everything went well
 }
 
-// Todo: maybe we could move this function to thread to reduce the irq loading (maybe a dma)
-// Risk: if we move this function to thread, we need a fifo big enough
+
 static void UART_ReceiveHandler(uint8_t received_byte)
 {
 	//static AckPacket ack;
@@ -370,8 +449,7 @@ static void UART_ReceiveHandler(uint8_t received_byte)
 	static uint16_t rx_current_opcode = 0;
 	static uint8_t rx_current_checksum = 0;
 	static uint8_t rx_current_status = AI_GLASS_CMD_UNKNOWN;
-	BaseType_t xTaskWokenByReceive = pdFALSE;
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
 	switch (index) {
 	case 0:
 		// check command header
@@ -413,10 +491,10 @@ static void UART_ReceiveHandler(uint8_t received_byte)
 		rx_current_checksum += received_byte;
 		index++;
 		if (rx_current_opcode == UART_OPC_CMD_ACK) {
-			dbg_printf("get ack packet rx_current_opcode\r\n");
-			if (xQueueReceiveFromISR(rx_uart_ack_recycle, (void *)&rx_ack_pkt, &xTaskWokenByReceive) == pdPASS) {
+			printf("get ack packet rx_current_opcode\r\n");
+			if (xQueueReceive(rx_uart_ack_recycle, (void *)&rx_ack_pkt, 0) == pdPASS) {
 				if (rx_current_len != ACK_DATA_LEN) {
-					dbg_printf("[UART WARN] rxack length expect %d but get %d\r\n", ACK_DATA_LEN, rx_current_len);
+					printf("[UART WARN] rxack length expect %d but get %d\r\n", ACK_DATA_LEN, rx_current_len);
 				}
 				rx_ack_pkt->length = rx_current_len;
 				rx_ack_pkt->opcode = rx_current_opcode;
@@ -425,15 +503,15 @@ static void UART_ReceiveHandler(uint8_t received_byte)
 			}
 		} else if (IS_VALID_UART_CMD(rx_current_opcode)) {
 			QueueHandle_t *queuerecycle = (IS_CRITICAL_UART_CMD(rx_current_opcode) ? &rx_critical_recycle : &rx_uart_recycle);
-			if (xQueueReceiveFromISR((*queuerecycle), (void *)&rx_pkt, &xTaskWokenByReceive) == pdPASS) {
+			if (xQueueReceive((*queuerecycle), (void *)&rx_pkt, 0) == pdPASS) {
 				if (rx_pkt->uart_pkt.data_buf) {
 					free(rx_pkt->uart_pkt.data_buf);
 					rx_pkt->uart_pkt.data_buf = NULL;
 				}
 				rx_pkt->uart_pkt.data_buf = malloc(rx_current_len);
 				if (!rx_pkt->uart_pkt.data_buf) {
-					dbg_printf("[UART WARN] rxpkt buf %d alloc fail\r\n", rx_current_len);
-					xQueueSendFromISR((*queuerecycle), (void *)&rx_pkt, NULL);
+					printf("[UART WARN] rxpkt buf %d alloc fail\r\n", rx_current_len);
+					xQueueSend((*queuerecycle), (void *)&rx_pkt, 0);
 					rx_pkt = NULL;
 				}
 				rx_pkt->uart_pkt.length = rx_current_len;
@@ -457,25 +535,24 @@ static void UART_ReceiveHandler(uint8_t received_byte)
 					rx_ack_pkt->checksum = received_byte;
 					// Check sum and ack will be verify in thread, to reduce the irq loading
 					rx_ack_pkt->get_ts = xTaskGetTickCountFromISR();
-					xQueueSendFromISR(rx_uart_ack_ready, (void *)&rx_ack_pkt, &xHigherPriorityTaskWoken);
+					xQueueSend(rx_uart_ack_ready, (void *)&rx_ack_pkt, 0);
 					rx_ack_pkt = NULL;
 				} else {
 					// Ack check sum fail, send back to recycle queue
-					xQueueSendFromISR(rx_uart_ack_recycle, (void *)&rx_ack_pkt, &xHigherPriorityTaskWoken);
+					xQueueSend(rx_uart_ack_recycle, (void *)&rx_ack_pkt, 0);
 					rx_ack_pkt = NULL;
-					dbg_printf("[UART WARN] rx ack check 0x%02x, 0x%02x, 0x%02x\r\n", rx_current_checksum, 0XFF - rx_current_checksum + 1, received_byte);
+					printf("[UART WARN] rx ack check 0x%02x, 0x%02x, 0x%02x\r\n", rx_current_checksum, 0XFF - rx_current_checksum + 1, received_byte);
 				}
 			} else if (rx_current_opcode != UART_OPC_CMD_ACK) {
 				// TODO: Check if the sequence is valid or not
 				SendAck(rx_current_seq, rx_current_opcode, rx_current_status);
 				if (rx_pkt) {
-					dbg_printf("get rx_pkt packet\r\n");
 					QueueHandle_t *queuerecycle = (IS_CRITICAL_UART_CMD(rx_current_opcode) ? &rx_critical_recycle : &rx_uart_recycle);
 					QueueHandle_t *queueready = (IS_CRITICAL_UART_CMD(rx_current_opcode) ? &rx_critical_ready : &rx_uart_ready);
 					if (exp_checksum == received_byte) {
 						rx_pkt->uart_pkt.checksum = received_byte;
 						// Check sum and ack will be verify in thread, to reduce the irq loading
-						xQueueSendFromISR((*queueready), (void *)&rx_pkt, &xHigherPriorityTaskWoken);
+						xQueueSend((*queueready), (void *)&rx_pkt, 0);
 						rx_pkt = NULL;
 					} else {
 						if (rx_pkt->uart_pkt.data_buf) {
@@ -483,9 +560,9 @@ static void UART_ReceiveHandler(uint8_t received_byte)
 							rx_pkt->uart_pkt.data_buf = NULL;
 						}
 						// Check sum and ack will be verify in thread, to reduce the irq loading
-						xQueueSendFromISR((*queuerecycle), (void *)&rx_pkt, &xHigherPriorityTaskWoken);
+						xQueueSend((*queuerecycle), (void *)&rx_pkt, 0);
 						rx_pkt = NULL;
-						dbg_printf("[UART WARN] rx cmd check\r\n");
+						printf("[UART WARN] rx cmd check\r\n");
 					}
 				}
 			}
@@ -510,15 +587,38 @@ static void UART_ReceiveHandler(uint8_t received_byte)
 	}
 }
 
-static void uart_service_irq(uint32_t id, SerialIrq event)
+static void ProcessUARTRecvThread(void *params)
+{
+	uint8_t data[UART_MAX_BUF_SIZE] = {0};
+	while (1) {
+		if (xSemaphoreTake(rx_data_sema, portMAX_DELAY) == pdTRUE) {
+			int bytes_read = ring_buffer_read_sequence(uart_rb, data, sizeof(data));
+
+			for (int i = 0; i < bytes_read; i++) {
+				UART_ReceiveHandler(data[i]);
+			}
+
+			rx_data_available = false;
+		}
+	}
+}
+
+static void UARTServiceIrq(uint32_t id, SerialIrq event)
 {
 	serial_t *sobj = (void *)id;
 
 	if (event == RxIrq) {
 		uint8_t rc = 0;
 		while (serial_readable(sobj)) {
+			if (ring_buffer_is_full(uart_rb)) {
+				break;
+			}
 			rc = (uint8_t)serial_getc(sobj);
-			UART_ReceiveHandler(rc);
+			ring_buffer_write_word(uart_rb, rc);
+		}
+		if (!rx_data_available) {
+			xSemaphoreGiveFromISR(rx_data_sema, pdFALSE);
+			rx_data_available = true;
 		}
 	}
 
@@ -620,7 +720,7 @@ static void ProcessUARTAckThread(void *params)
 	}
 }
 
-static void uart_send_string_done(uint32_t id)
+static void UARTSendStringDone(uint32_t id)
 {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 	if (id != (int) & (srobj.sobj)) {
@@ -928,13 +1028,24 @@ int uart_service_init(PinName tx_pin, PinName rx_pin, int baudrate)
 {
 	int ret = 0;
 	serial_init(&(srobj.sobj), tx_pin, rx_pin);
-	//if (ret != HAL_OK) {
-	//return UART_SERVICE_INIT_FAIL;
-	//}
+
+	rx_data_sema = xSemaphoreCreateBinary();
+	if (rx_data_sema == NULL) {
+		printf("rx_data_sema create fail\r\n");
+		return UART_SERVICE_INIT_FAIL;
+	}
+	rx_data_available = false;
+	uart_rb = ring_buffer_init(UART_MAX_BUF_SIZE);
+	if (uart_rb == NULL) {
+		printf("ring_buffer_init fail\r\n");
+		ret = UART_SERVICE_INIT_FAIL;
+		return ret;
+	}
+
 	serial_baud(&(srobj.sobj), baudrate);
 	serial_format(&(srobj.sobj), 8, ParityNone, 1);
-	serial_irq_handler(&(srobj.sobj), uart_service_irq, (uint32_t) & (srobj.sobj));
-	serial_send_comp_handler(&(srobj.sobj), (void *)uart_send_string_done, (uint32_t) & (srobj.sobj));
+	serial_irq_handler(&(srobj.sobj), UARTServiceIrq, (uint32_t) & (srobj.sobj));
+	serial_send_comp_handler(&(srobj.sobj), (void *)UARTSendStringDone, (uint32_t) & (srobj.sobj));
 
 	ret = CreateRxUartQueue(MAX_UART_QUEUE_SIZE, MAX_CRITICAL_QUEUE_SIZE, MAX_UARTACK_QUEUE_SIZE);
 	if (ret != UART_OK) {
@@ -980,8 +1091,12 @@ int uart_service_init(PinName tx_pin, PinName rx_pin, int baudrate)
 		printf("Task ProcessUARTCriticalThread create fail\r\n");
 		return UART_SERVICE_INIT_FAIL;
 	}
-	if (xTaskCreate(ProcessUARTAckThread, ((const char *)"UARTAck"), 4096, NULL, tskIDLE_PRIORITY + UART_ACK_PRIORITY, &uartcrticaltask) != pdPASS) {
+	if (xTaskCreate(ProcessUARTAckThread, ((const char *)"UARTAck"), 4096, NULL, tskIDLE_PRIORITY + UART_ACK_PRIORITY, &uartacktask) != pdPASS) {
 		printf("Task ProcessUARTAckThread create fail\r\n");
+		return UART_SERVICE_INIT_FAIL;
+	}
+	if (xTaskCreate(ProcessUARTRecvThread, ((const char *)"UARTRecv"), 4096, NULL, tskIDLE_PRIORITY + UART_RECV_PRIORITY, &uartrecvtask) != pdPASS) {
+		printf("Task ProcessUARTRecvThread create fail\r\n");
 		return UART_SERVICE_INIT_FAIL;
 	}
 	srobj.uart_init = 1;

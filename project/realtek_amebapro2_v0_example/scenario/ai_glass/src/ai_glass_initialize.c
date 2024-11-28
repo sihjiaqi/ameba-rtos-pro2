@@ -384,7 +384,7 @@ static void uart_service_snapshot(uartcmdpacket_t *param)
 	}
 	printf("snapshot aiglass_mass_storage_deinit time = %lu\r\n", mm_read_mediatime_ms());
 	if (mode == 1) {
-		aiglass_mass_storage_deinit();
+		//aiglass_mass_storage_deinit();
 		printf("Process AI SNAPSHOT\r\n");
 		printf("ai_snap_pkt_params\r\n");
 		printf("version = %u\r\n", ai_snap_pkt_params.version);
@@ -419,9 +419,8 @@ static void uart_service_snapshot(uartcmdpacket_t *param)
 			status = AI_GLASS_PROC_FAIL;
 		}
 		printf("snapshot send pkt time = %lu\r\n", mm_read_mediatime_ms());
-
-		aiglass_mass_storage_init();
 		uart_send_packet(UART_OPC_RESP_SNAPSHOT, &snapshot_status_param, 2000);
+		//aiglass_mass_storage_init();
 		if (ret == 0) {
 			while (ai_snapshot_deinitialize()) {
 				printf("wait for ai snapshot deinit\r\n");
@@ -444,11 +443,12 @@ static void uart_service_snapshot(uartcmdpacket_t *param)
 
 		int ret = lifetime_snapshot_initialize();
 		if (ret == 0) {
-			char *cur_time_str = media_filesystem_get_current_time_string();
+			char *cur_time_str = (char *)media_filesystem_get_current_time_string();
+			char temp_buffer[128] = {0};
 			uint8_t lifetime_snap_name[128] = {0};
 			//snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "lifesnap_%s.jpg", cur_time_str);
-			extdisk_generate_unique_filename("lifesnap_", cur_time_str, ".jpg", lifetime_snap_name, 128);
-			snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", lifetime_snap_name, ".jpg");
+			extdisk_generate_unique_filename("lifesnap_", cur_time_str, ".jpg", (char *)temp_buffer, 128);
+			snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_buffer, ".jpg");
 			free(cur_time_str);
 			if (lifetime_snapshot_take((const char *)lifetime_snap_name) == 0) {
 				status = AI_GLASS_CMD_COMPLETE;
@@ -464,9 +464,9 @@ static void uart_service_snapshot(uartcmdpacket_t *param)
 		} else {
 			status = AI_GLASS_PROC_FAIL;
 		}
+		uart_send_packet(UART_OPC_RESP_SNAPSHOT, &snapshot_status_param, 2000);
 		aiglass_mass_storage_init();
 		aiglass_get_video_send_end_semaphore();
-		uart_send_packet(UART_OPC_RESP_SNAPSHOT, &snapshot_status_param, 2000);
 	} else {
 		printf("Not implement yet\r\n");
 		status = AI_GLASS_PROC_FAIL;
@@ -705,7 +705,7 @@ static void mp4_send_response_callback(struct tmrTimerControl *parm)
 	} else {
 		printf("Send UART_OPC_RESP_RECORD_CONT timer mutex failed\r\n");
 	}
-	printf("mp4_send_response_callback UART_OPC_RESP_RECORD_CONT\r\n");
+	//printf("mp4_send_response_callback UART_OPC_RESP_RECORD_CONT\r\n");
 	return;
 }
 static void uart_service_record_start(uartcmdpacket_t *param)
@@ -1109,6 +1109,7 @@ void fTESTGSENSOR(void *arg)
 
 void fDISKFORMAT(void *arg)
 {
+	ai_glass_init_external_disk();
 	printf("Format disk to FAT32\r\n");
 	int ret = vfs_user_format(ai_glass_disk_name, VFS_FATFS, EXTDISK_PLATFORM);
 	if (ret == FR_OK) {
@@ -1126,16 +1127,17 @@ void fSENDVIDEOEND(void *arg)
 #endif
 }
 
-void fSETUPWIFI(void *arg)
+void fENABLEMSC(void *arg)
 {
-
+	printf("Enable mass storage device\r\n");
+	aiglass_mass_storage_init();
 }
 
 log_item_t at_ai_glass_items[ ] = {
 	{"DISKFORMAT",      fDISKFORMAT,    {NULL, NULL}},
 	{"TESTGSENSOR",     fTESTGSENSOR,   {NULL, NULL}},
 	{"SENDVIDEOEND",    fSENDVIDEOEND,  {NULL, NULL}},
-	//{"SETUPWIFI",       fSETUPWIFI,     {NULL, NULL}},
+	{"ENABLEMSC",       fENABLEMSC,     {NULL, NULL}},
 };
 #endif
 void ai_glass_log_init(void)

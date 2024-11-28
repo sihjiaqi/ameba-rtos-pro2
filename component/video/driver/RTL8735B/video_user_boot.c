@@ -179,6 +179,26 @@ video_boot_stream_t video_boot_stream = {
 			.fcs_status = 0,
 			.fcs_setting_done = 0,
 			.fcs_isp_iq_id = 0,
+	//Extra channel after voe 1.4.8.1
+	.extra_video_params.stream_id = STREAM_ID_VEXTRA,
+	.extra_video_params.type = CODEC_JPEG,
+	.extra_video_params.resolution = 0,
+	.extra_video_params.width  = 320,
+	.extra_video_params.height = 240,
+	.extra_video_params.bps = 0,
+	.extra_video_params.fps = 5,
+	.extra_video_params.gop = 0,
+	.extra_video_params.rc_mode = 2,
+	.extra_video_params.jpeg_qlevel = 5,
+	.extra_video_params.rotation = 0,
+	.extra_video_params.out_buf_size = VEXT_ENC_BUF_SIZE,
+	.extra_video_params.out_rsvd_size = 0,
+	.extra_video_params.direct_output = 0,
+	.extra_video_params.use_static_addr = 0,
+	.extra_video_snapshot = 1,
+	.extra_video_drop_frame = 0,
+	.extra_video_params.fcs = 0, //not support fcs
+	.extra_video_enable = 0
 };
 //#define FCS_PARTITION //Use the FCS data to change the parameter from bootloader.If mark the marco, it will use the FTL config.
 extern hal_snafc_adaptor_t boot_snafc_adpt;

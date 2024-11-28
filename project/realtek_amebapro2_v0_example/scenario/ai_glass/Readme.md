@@ -34,6 +34,7 @@ This scenario is intended for a templete for ai glass scenario
 - set bl_log_cust_ctrl to DISABLE
 
 4. \component\video\driver\RTL8735B\video_user_boot.c
+- open flag ISP_CONTROL_TEST for the isp pre-setting
 - modify the following setting in the video_boot_stream (other keeping the same)
 	.video_params[STREAM_V1].width  = 176,
 	.video_params[STREAM_V1].height = 144,
@@ -55,6 +56,14 @@ This scenario is intended for a templete for ai glass scenario
 	.video_enable[STREAM_V2] = 1,
 	.video_enable[STREAM_V3] = 0,
 	.video_enable[STREAM_V4] = 0,
+- modify the following setting in the user_boot_config_init (other keeping the same)
+    video_boot_stream.init_isp_items.init_brightness = 0;    //Default:0
+    video_boot_stream.init_isp_items.init_contrast = 50;     //Default:50
+    video_boot_stream.init_isp_items.init_flicker = 1;        //Default:1
+    video_boot_stream.init_isp_items.init_mirrorflip = 0xf3;  //Mirror and flip
+    video_boot_stream.init_isp_items.init_saturation = 50;    //Default:50
+    video_boot_stream.init_isp_items.init_wdr_level = 50;     //Default:50
+    video_boot_stream.init_isp_items.init_wdr_mode = 0;       //Default:0
 
 5. \project\realtek_amebapro2_v0_example\inc\sensor.h
 - in sen_id, replace SENSOR_GC2053 by SENSOR_SC5356
@@ -63,7 +72,7 @@ This scenario is intended for a templete for ai glass scenario
 - set ENABLE_FCS to 1
 
 6. \component\file_system\fatfs\fatfs_ramdisk_api.c
-- set a proper size for RAM_DISK_SZIE which is the size of the ram disk
+- set a proper size for RAM_DISK_SIZE which is the size of the ram disk
 - Here we set the ram disk size to 1024*1024*2 since we only need 2M to store a 720P jpeg (720 * 1280 * 3 / 2 ~ 1.3MB)
 1024*1024*2
 
