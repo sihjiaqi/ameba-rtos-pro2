@@ -58,7 +58,7 @@ uint32_t gpio_set(PinName pin)
 {
 	uint32_t ip_pin;
 
-	DBG_ASSERT(pin != (PinName)NC);
+	DIAG_ASSERT(pin != (PinName)NC);
 	pin_function(pin, 0);
 	ip_pin = pin;
 

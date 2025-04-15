@@ -570,8 +570,12 @@ typedef struct {
 	u32 verify_nlsc_gcenter_y;
 	u32 verify_nlsc_bcenter_x;
 	u32 verify_nlsc_bcenter_y;
-	
-	u32 rsvd[28];   //When add new element, please reduce same rsvd size
+
+	u8 *manual_zoom_filter_coef;
+
+	u32 isp_tnr_dis;
+
+	u32 rsvd[26];   //When add new element, please reduce same rsvd size
 
 } __attribute__((aligned(32))) commandLine_s;
 

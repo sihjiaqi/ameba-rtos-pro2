@@ -196,6 +196,9 @@ typedef struct video_pre_init_params_s {
 	uint32_t video_meta_extend_total_size;//the extend meta total size
 	uint32_t meta_enable_extend;//Add the 3A info at I frame
 	uint32_t meta_gop_duration;//Setup times to the I frame by gop duration.
+	
+	uint32_t first_raw_enable;
+	struct verify_ctrl_config *v_cfg;
 } video_pre_init_params_t;
 
 typedef struct private_mask_single_s {
@@ -480,6 +483,10 @@ int video_set_bps_stbl_ctrl_params(int ch, bps_stbl_ctrl_param_t *bps_stbl_ctrl_
 int video_get_realfps(int ch, int* isp_fps, int* enc_fps);
 
 int video_wait_target_fps(int ch, int target_fps, int timeout);
+
+int video_set_voe_heap(int heap_addr, int heap_size, int use_malloc);
+
+void video_set_isp_ch_buf(int ch, int slot_num);
 
 //////////////////////
 #define VOE_NAND_FLASH_OFFSET 0x8000000

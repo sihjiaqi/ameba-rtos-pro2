@@ -950,13 +950,13 @@ int wifi_wowlan_set_wdt(u8  gpio,
 
 #ifdef CONFIG_WOWLAN_BCN_TRACK
 extern void rtw_set_bcn_track(u8  start_window,
-							  u8  max_window,
+							  u16  max_window,
 							  u8  increment_steps,
 							  u8  duration);
 
 
 int wifi_wowlan_set_bcn_track(u8  start_window,
-							  u8  max_window,
+							  u16  max_window,
 							  u8  increment_steps,
 							  u8  duration)
 {
@@ -1122,14 +1122,6 @@ struct dhcprenew_msg {
 	uint32_t cookie;
 	uint8_t options[64];   /* Optional parameters field. reference the RFC 2132 */
 };
-
-#if CONFIG_LWIP_LAYER==0
-/* REMOVE this, CONFIG_LWIP_LAYER cannot be turn off at this file */
-#define PP_HTONL(x) ((((x) & 0x000000ffUL) << 24) | \
-                     (((x) & 0x0000ff00UL) <<  8) | \
-                     (((x) & 0x00ff0000UL) >>  8) | \
-                     (((x) & 0xff000000UL) >> 24))
-#endif
 
 int wifi_set_dhcp_offload(void)
 {

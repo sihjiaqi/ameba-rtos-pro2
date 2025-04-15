@@ -216,6 +216,9 @@ static void example_mmf2_video_surport(void)
 	// RGB  -> NN image classification (V4)
 	//mmf2_video_example_vipnn_classify_rtsp_init();
 
+	//V1 timslapse mp4 example
+	//mmf2_video_example_timelapse_mp4_init();
+
 	video_init_done = 1;
 }
 

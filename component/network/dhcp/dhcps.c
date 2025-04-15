@@ -4,6 +4,20 @@
 #include "wifi_constants.h"
 #include "lwip_netconf.h"
 extern rtw_mode_t wifi_mode;
+/*
+The dhcps_compatibilty_enabled is used to configure the dhcps settings, each bit controls one aspect.
+bit 0: (0(default): default enable LWIP GATEWAY/DNS, 1: disable LWIP WIP GATEWAY/DNS and dhcp_option 114 enable)
+*/
+static int dhcps_compatibilty_enabled = 0;
+
+
+#define dhcps_compatibility_is_enable(a,b) ((a & b) ? 1 : 0)
+
+void dhcps_set_compatibilty_enable(int compatibilty_enabled)
+{
+	dhcps_compatibilty_enabled = compatibilty_enabled;
+}
+
 //static struct dhcp_server_state dhcp_server_state_machine;
 static uint8_t dhcp_server_state_machine = DHCP_SERVER_STATE_IDLE;
 /* recorded the client MAC addr(default sudo mac) */
@@ -365,6 +379,10 @@ static uint8_t *fill_one_option_content(uint8_t *option_base_addr,
 		memcpy(option_data_base_address, copy_info, DHCP_OPTION_LENGTH_ONE);
 		next_option_start_address = option_data_base_address + 1;
 		break;
+	case DHCP_OPTION_LENGTH_THIRTY_SIX:
+		memcpy(option_data_base_address, copy_info, DHCP_OPTION_LENGTH_THIRTY_SIX);
+		next_option_start_address = option_data_base_address + 36;
+		break;
 	}
 
 	return next_option_start_address;
@@ -394,23 +412,26 @@ static int8_t add_offer_options(uint8_t *option_start_address)
 	} else {
 		goto ERROR;
 	}
+	if (!dhcps_compatibility_is_enable(dhcps_compatibilty_enabled, BIT(0))) {
+		/* add DHCP options 3 (i.e router(gateway)). The time server option
+		specifies a list of RFC 868 [6] time servers available to the client. */
+		if (temp_option_addr + 6 - option_start_address <= max_addable_option_len) {
+			temp_option_addr = fill_one_option_content(temp_option_addr, DHCP_OPTION_CODE_ROUTER,
+							   DHCP_OPTION_LENGTH_FOUR, (void *)&dhcps_local_address);
+		} else {
+			goto ERROR;
+		}
 
-	/* add DHCP options 3 (i.e router(gateway)). The time server option
-	specifies a list of RFC 868 [6] time servers available to the client. */
-	if (temp_option_addr + 6 - option_start_address <= max_addable_option_len) {
-		temp_option_addr = fill_one_option_content(temp_option_addr, DHCP_OPTION_CODE_ROUTER,
-						   DHCP_OPTION_LENGTH_FOUR, (void *)&dhcps_local_address);
+		/* add DHCP options 6 (i.e DNS).
+		The option specifies a list of DNS servers available to the client. */
+		if (temp_option_addr + 6 - option_start_address <= max_addable_option_len) {
+			temp_option_addr = fill_one_option_content(temp_option_addr, DHCP_OPTION_CODE_DNS_SERVER,
+							   DHCP_OPTION_LENGTH_FOUR, (void *)&dhcps_local_address);
+		} else {
+			goto ERROR;
+		}
 	} else {
-		goto ERROR;
-	}
-
-	/* add DHCP options 6 (i.e DNS).
-	    The option specifies a list of DNS servers available to the client. */
-	if (temp_option_addr + 6 - option_start_address <= max_addable_option_len) {
-		temp_option_addr = fill_one_option_content(temp_option_addr, DHCP_OPTION_CODE_DNS_SERVER,
-						   DHCP_OPTION_LENGTH_FOUR, (void *)&dhcps_local_address);
-	} else {
-		goto ERROR;
+		printf("[%s] ignore dhcp option 3/6\n\r", __FUNCTION__);
 	}
 
 	/* add DHCP options 51.
@@ -456,6 +477,19 @@ static int8_t add_offer_options(uint8_t *option_start_address)
 						   DHCP_OPTION_LENGTH_ONE,	NULL);
 	} else {
 		goto ERROR;
+	}
+
+	/* add DHCP options 114.
+	This option specifies whether or not the client should solicit routers */
+	if (dhcps_compatibility_is_enable(dhcps_compatibilty_enabled, BIT(0))) {
+		u8 str[] = "urn:ietf:params:capport:unrestricted";
+		printf("[%s] add dhcp option 114 (len: %d)\n\r", __FUNCTION__, strlen((char *)str));
+		if (temp_option_addr + 3 - option_start_address <= max_addable_option_len) {
+			temp_option_addr = fill_one_option_content(temp_option_addr, DHCP_OPTION_CODE_CAPTIVE_PORTAL,
+							   DHCP_OPTION_LENGTH_THIRTY_SIX, str);
+		} else {
+			goto ERROR;
+		}
 	}
 
 	// END

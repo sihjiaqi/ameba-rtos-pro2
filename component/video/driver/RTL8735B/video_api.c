@@ -69,6 +69,7 @@ static int fcs_queue_start_time = 0;
 static int fcs_queue_end_time = 0;
 static video_pre_init_params_t video_pre_init_param = {
 	.voe_dbg_disable = !APP_VOE_LOG_EN,
+	.v_cfg = NULL,
 };
 
 //Video boot config//
@@ -171,6 +172,11 @@ void video_mpu_trigger(void)
 	ptr[1] = 0xff;
 }
 #endif
+
+void video_set_isp_ch_buf(int ch, int slot_num) {
+	video_dprintf(VIDEO_LOG_INF, "modify ch%d slot num %d\r\n", ch, slot_num);
+	isp_ch_buf_num[ch] = slot_num;
+}
 
 int video_get_maxqp(int ch)
 {
@@ -936,7 +942,7 @@ void video_set_isp_info(isp_info_t *info)
 	isp_info.hdr_enable = info->hdr_enable;
 }
 
-static int video_set_voe_heap(int heap_addr, int heap_size, int use_malloc)
+int video_set_voe_heap(int heap_addr, int heap_size, int use_malloc)
 {
 #if 0
 	if (use_malloc) {
@@ -1764,6 +1770,18 @@ void video_pre_init_procedure(int ch, video_pre_init_params_t *parm)
 		v_adp->cmd[ch]->all_init_iq_set_flag = 1;
 		v_adp->cmd[ch]->drop_frame_num = parm->video_drop_frame;
 	}
+	
+	if(parm->first_raw_enable) {
+		//for trigger first raw
+		video_dprintf(VIDEO_LOG_INF, "hal_video_isp_init_raw(%d, 1)\r\n", ch);
+		hal_video_isp_init_raw(ch, 1);
+	}
+
+	if(parm->v_cfg) {
+		video_dprintf(VIDEO_LOG_INF, "hal_isp_set_verify_info(%d, %x)\r\n", ch, parm->v_cfg);
+		hal_video_isp_verify_info(ch, *(parm->v_cfg));
+	}
+
 }
 
 int video_open_status(void)//0:No video open 1:video open
@@ -2055,7 +2073,7 @@ int video_open(video_params_t *v_stream, output_callback_t output_cb, void *ctx)
 					   , fps_cmd3
 					   , v_stream->width
 					   , v_stream->height
-					   , 0
+					   , (v_stream->out_mode ? v_stream->out_mode: 0) //set out mode if not 0
 					   , 3
 					   , paramter_table[value]);
 		if (ret < 0 || ret >= sizeof(cmd3)) {
@@ -2124,6 +2142,10 @@ int video_open(video_params_t *v_stream, output_callback_t output_cb, void *ctx)
 	if (v_adp) {
 		if (isp_info.osd_enable) {
 			v_adp->cmd[ch]->osd	= 1;
+			v_adp->cmd[ch]->osd_block_num = 24;
+		} else {
+			v_adp->cmd[ch]->osd	= 0;
+			v_adp->cmd[ch]->osd_block_num = 0;
 		}
 	}
 

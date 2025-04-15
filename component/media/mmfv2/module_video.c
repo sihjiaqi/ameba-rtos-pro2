@@ -224,6 +224,7 @@ void video_frame_complete_cb(void *param1, void  *param2, uint32_t arg)
 				ctx->dbg_ts_info->timestamp_cnt++;
 			}
 		}
+		ctx->frame_cnt++;
 	} else {
 		// Video error handle
 
@@ -256,8 +257,14 @@ void video_frame_complete_cb(void *param1, void  *param2, uint32_t arg)
 		return;
 	}
 
+	if(ctx->frame_drop_interval) {
+		if(ctx->frame_cnt % ctx->frame_drop_interval != 1) {
+			goto direct_output;
+		}
+	}
+
 	if (ctx->params.direct_output == 1) {
-		goto show_log;
+		goto direct_output;
 	}
 
 	// Snapshot JPEG
@@ -275,7 +282,7 @@ void video_frame_complete_cb(void *param1, void  *param2, uint32_t arg)
 				if (tempaddr == NULL) {
 					video_encbuf_release(enc2out->ch, CODEC_JPEG, enc2out->jpg_len);
 					VIDEO_DBG_ERROR("malloc fail = %d\r\n", enc2out->jpg_len);
-					goto show_log;
+					return;
 				}
 			}
 
@@ -349,7 +356,7 @@ void video_frame_complete_cb(void *param1, void  *param2, uint32_t arg)
 					} else {
 						video_encbuf_release(enc2out->ch, enc2out->codec, output_item->size);
 					}
-					goto show_log;
+					return;
 				}
 			}
 
@@ -469,28 +476,24 @@ void video_frame_complete_cb(void *param1, void  *param2, uint32_t arg)
 		}
 	}
 
-show_log:
+	return;
 
-	if (ctx->params.direct_output == 1) {
+direct_output:
 
-		if (enc2out->codec & (CODEC_H264 | CODEC_HEVC)) {
-			VIDEO_DBG_INFO("(%s-%s)(0x%X -- %d)(ch%d)(wh=%d x %d) \n"
-						   , (enc2out->codec & CODEC_H264) != 0 ? "H264" : "HEVC"
-						   , (enc2out->type == VCENC_INTRA_FRAME) ? "I" : "P"
-						   , enc2out->enc_addr, enc2out->enc_len, enc2out->ch, enc2out->width, enc2out->height);
-
-		}
+	if (enc2out->codec & (CODEC_H264 | CODEC_HEVC)) {
+		VIDEO_DBG_INFO("(%s-%s)(0x%X -- %d)(ch%d)(wh=%d x %d) \n"
+						, (enc2out->codec & CODEC_H264) != 0 ? "H264" : "HEVC"
+						, (enc2out->type == VCENC_INTRA_FRAME) ? "I" : "P"
+						, enc2out->enc_addr, enc2out->enc_len, enc2out->ch, enc2out->width, enc2out->height);
 	}
 
 
-	if (ctx->params.direct_output == 1) {
-		if ((enc2out->codec & (CODEC_H264 | CODEC_HEVC)) != 0) {
-			video_encbuf_release(enc2out->ch, enc2out->codec, enc2out->enc_len);
-		} else if ((enc2out->codec & (CODEC_NV12 | CODEC_RGB | CODEC_NV16)) != 0) {
-			video_ispbuf_release(enc2out->ch, (int)enc2out->isp_addr);
-		} else if ((enc2out->codec & CODEC_JPEG) != 0) {
-			video_encbuf_release(enc2out->ch, enc2out->codec, enc2out->jpg_len);
-		}
+	if ((enc2out->codec & (CODEC_H264 | CODEC_HEVC)) != 0) {
+		video_encbuf_release(enc2out->ch, enc2out->codec, enc2out->enc_len);
+	} else if ((enc2out->codec & (CODEC_NV12 | CODEC_RGB | CODEC_NV16)) != 0) {
+		video_ispbuf_release(enc2out->ch, (int)enc2out->isp_addr);
+	} else if ((enc2out->codec & CODEC_JPEG) != 0) {
+		video_encbuf_release(enc2out->ch, enc2out->codec, enc2out->jpg_len);
 	}
 
 	//close output task
@@ -525,6 +528,7 @@ int video_control(void *p, int cmd, int arg)
 			VIDEO_DBG_WARNING("CH %d already close\r\n", ch);
 			return OK;
 		}
+		ctx->frame_cnt = 0;
 		memset(&(ctx->meta_data), 0, sizeof(video_meta_t));
 		//video_close will release all voe buffer
 		ret = video_close(ch);
@@ -726,6 +730,10 @@ int video_control(void *p, int cmd, int arg)
 		if (video_open_status() == 0) {
 			voe_get_sensor_info(sensor_id, &ctx->iq_addr, &ctx->sensor_addr);
 			sensor_id_value = sensor_id;
+			info.sensor_fps    = sensor_params[sen_id[sensor_id_value]].sensor_fps;
+			info.sensor_width  = sensor_params[sen_id[sensor_id_value]].sensor_width;
+			info.sensor_height = sensor_params[sen_id[sensor_id_value]].sensor_height;
+			video_set_isp_info(&info);
 		} else {
 			VIDEO_DBG_ERROR("Close streams before switch sensors.\r\n");
 			return NOK;
@@ -840,6 +848,10 @@ int video_control(void *p, int cmd, int arg)
 	case CMD_VIDEO_PRE_INIT_SAVE: {
 		//save_to_flash 0: only save to pre init structure, 1: save to flash, 2: save to sram retention
 		video_pre_init_save_cur_params((ctx->params.meta_enable && video_pre_init_get_meta_enable()), &ctx->meta_data, arg);
+		break;
+	}
+	case CMD_VIDEO_SET_CAP_INTVL: {
+		ctx->frame_drop_interval = ctx->params.fps * arg;
 		break;
 	}
 }

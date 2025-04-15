@@ -51,6 +51,7 @@ int mp4_handle(void *p, void *input, void *output)
 
 int mp4_control(void *p, int cmd, int arg)
 {
+	int ret = 0;
 	mp4_ctx_t *ctx = (mp4_ctx_t *)p;
 	struct _mp4_context *mp4_muxer = (struct _mp4_context *)ctx->mp4_muxer;
 	switch (cmd) {
@@ -198,6 +199,9 @@ int mp4_control(void *p, int cmd, int arg)
 		}
 	}
 	break;
+	case CMD_MP4_SET_TIMELAPSE_PARAMS: 
+		ret =  mp4_set_timelapse_param(mp4_muxer, (mp4_timelapse_params_t *)arg);
+		break;
 	default:
 		break;
 	}
@@ -208,7 +212,7 @@ int mp4_control(void *p, int cmd, int arg)
 	int (*cb_fclose)(void*);
 	*/
 
-	return 0;
+	return ret;
 }
 
 void *mp4_destroy(void *p)

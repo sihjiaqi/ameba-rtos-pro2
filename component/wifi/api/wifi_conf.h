@@ -1217,7 +1217,7 @@ int wifi_wowlan_set_wdt(u8  gpio,
  * @return  RTW_SUCCESS
  */
 int wifi_wowlan_set_bcn_track(u8  start_window,
-							  u8  max_window,
+							  u16  max_window,
 							  u8  increment_steps,
 							  u8  duration);
 #endif

@@ -14,6 +14,8 @@
 #include "media_filesystem.h"
 #include "ai_glass_dbg.h"
 #include <string.h>
+#include "mmf2_mediatime_8735b.h"
+#include "ai_glass_media.h"
 
 #define USE_HTTPS                   0
 #define DELETE_FILE_AFTER_UPLOAD    1
@@ -44,6 +46,7 @@
 #define TOTAL_LEN               (SERVER_READ_BUF_SIZE * 2 + 2)
 #define TOTOAL_FILE_NUM         2
 static uint8_t read_buf[TOTAL_LEN] = {0};
+static int terminate_signal = 0;
 
 //FOR HTTP DOWNLOAD
 #define HTTP_DATA_BUF_SIZE      4096
@@ -141,107 +144,91 @@ static int convert_ota_status_to_string(int ota_status, char *ota_status_str)
 	return ret;
 }
 
-static int server_port = 3000;
-static const char *server_host = "192.168.43.2";
-static void ota_httpc_send_thread(void *param)
+static int multicast_port = 5353;
+static const char *multicast_group_ip = "224.0.0.251";
+static void ota_multicast_send_thread(void *param)
 {
-	/* To avoid gcc warnings */
-	(void) param;
-
-#if defined(configENABLE_TRUSTZONE) && (configENABLE_TRUSTZONE == 1) && defined(CONFIG_SSL_CLIENT_PRIVATE_IN_TZ) && (CONFIG_SSL_CLIENT_PRIVATE_IN_TZ == 1)
-	extern void rtw_create_secure_context(u32 secure_stack_size);
-	rtw_create_secure_context(STACKSIZE * 2);
-	extern int NS_ENTRY secure_mbedtls_platform_set_calloc_free(void);
-	secure_mbedtls_platform_set_calloc_free();
-	extern void NS_ENTRY secure_set_ns_device_lock(void (*device_mutex_lock_func)(uint32_t), void (*device_mutex_unlock_func)(uint32_t));
-	secure_set_ns_device_lock(device_mutex_lock, device_mutex_unlock);
-#endif
-
-	struct httpc_conn *conn = NULL;
-
-	// Delay to wait for IP by DHCP
-	WLAN_SCEN_MSG("HTTP Client OTA TESTING THREADS\r\n");
-
-#if USE_HTTPS
-	conn = httpc_conn_new(HTTPC_SECURE_TLS, NULL, NULL, NULL);
-#else
-	conn = httpc_conn_new(HTTPC_SECURE_NONE, NULL, NULL, NULL);
-#endif
-	char *iot_json = NULL;
-	if (conn) {
-		while (httpd_is_running()) {
-			vTaskDelay(1000);
-#if USE_HTTPS
-			if (httpc_conn_connect(conn, (char *)server_host, server_port, 2000) != 0)
-#else
-			if (httpc_conn_connect(conn, (char *)server_host, server_port, 2000) != 0)
-#endif
-			{
-				WLAN_SCEN_ERR("ERROR: httpc_conn_connect\r\n");
-				continue;
-			} else {
-				WLAN_SCEN_MSG("Connect Successfully\r\n");
-			}
-
-			if (http_ota_status != OTA_STATE_IDLE) {
-				WLAN_SCEN_ERR("HTTP OTA status is not in the idle status\r\n");
-				httpc_conn_close(conn);
-				continue;
-			} else {
-				cJSON *IOTJSObject = cJSON_CreateObject();
-				cJSON_AddItemToObject(IOTJSObject, "OTA_state", cJSON_CreateString("OTA_STATE_IDLE"));
-				iot_json = cJSON_Print(IOTJSObject);
-				cJSON_Delete(IOTJSObject);
-				// HTTP GET request
-				// start a header and add Host (added automatically), Content-Type and Content-Length (added by input param)
-				httpc_request_write_header_start(conn, (char *)"POST", (char *)"/api/connectedclients", (char *)"application/json", strlen(iot_json));
-				// add other required header fields if necessary
-				httpc_request_write_header(conn, (char *)"Connection", (char *)"keep-alive");
-				// finish and send header
-				httpc_request_write_header_finish(conn);
-				httpc_request_write_data(conn, (uint8_t *)iot_json, strlen(iot_json));
-
-				// receive response header
-				if (httpc_response_read_header(conn) == 0) {
-					httpc_conn_dump_header(conn);
-					// receive response body
-					if (httpc_response_is_status(conn, (char *)"200 OK")) {
-						uint8_t buf[1024];
-						int read_size = 0;
-						uint32_t total_size = 0;
-
-						while (1) {
-							memset(buf, 0, sizeof(buf));
-							read_size = httpc_response_read_data(conn, buf, sizeof(buf) - 1);
-
-							if (read_size > 0) {
-								total_size += read_size;
-								WLAN_SCEN_WARN("%s", buf);
-							} else {
-								break;
-							}
-
-							if (conn->response.content_len && (total_size >= conn->response.content_len)) {
-								break;
-							}
-						}
-					}
-				}
-				httpc_conn_close(conn);
-			}
+	int err = 0;
+	int socket = -1;
+	// Set NETIF_FLAG_IGMP flag for netif which should process IGMP messages
+	xnetif[0].flags |= NETIF_FLAG_IGMP;
+	if ((socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+		WLAN_SCEN_ERR("ERROR: socket - AF_INET, SOCK_DGRAM\r\n");
+		err = -1;
+	}
+	// Add multicast group membership on this interface
+	if (err == 0) {
+		struct ip_mreq imr;
+		imr.imr_multiaddr.s_addr = inet_addr(multicast_group_ip);
+		imr.imr_interface.s_addr = INADDR_ANY;
+		err = setsockopt(socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &imr, sizeof(imr));
+		if (err < 0) {
+			WLAN_SCEN_ERR("ERROR: setsockopt - IP_ADD_MEMBERSHIP\r\n");
 		}
 	}
-
-	httpc_conn_free(conn);
+	// Specify outgoing interface too
+	if (err == 0) {
+		struct in_addr intfAddr;
+		intfAddr.s_addr = INADDR_ANY;
+		err = setsockopt(socket, IPPROTO_IP, IP_MULTICAST_IF, &intfAddr, sizeof(struct in_addr));
+		if (err < 0) {
+			WLAN_SCEN_ERR("ERROR: setsockopt - IP_MULTICAST_IF\r\n");
+		}
+	}
+	// And start listening for packets
+	if (err == 0) {
+		struct sockaddr_in bindAddr;
+		bindAddr.sin_family = AF_INET;
+		bindAddr.sin_port = htons(multicast_port);
+		bindAddr.sin_addr.s_addr = INADDR_ANY;
+		err = bind(socket, (struct sockaddr *)&bindAddr, sizeof(bindAddr));
+		if (err < 0) {
+			WLAN_SCEN_ERR("ERROR: bind\r\n");
+		}
+	}
+	cJSON *IOTJSObject = cJSON_CreateObject();
+	cJSON_AddItemToObject(IOTJSObject, "OTA_state", cJSON_CreateString("OTA_STATE_IDLE"));
+	char *iot_json = cJSON_Print(IOTJSObject);
+	cJSON_Delete(IOTJSObject);
+	if (err == 0) {
+		while (1) {
+			if (http_ota_status != OTA_STATE_IDLE) {
+				WLAN_SCEN_MSG("HTTP OTA status is not in the idle status, stop sending multicast packet\r\n");
+			} else {
+				if (terminate_signal == 1) {
+					WLAN_SCEN_MSG("terminate signal received\r\n");
+					break;
+				}
+				int sendLen;
+				struct sockaddr to;
+				struct sockaddr_in *to_sin = (struct sockaddr_in *)&to;
+				to_sin->sin_family = AF_INET;
+				to_sin->sin_port = htons(multicast_port);
+				to_sin->sin_addr.s_addr = inet_addr(multicast_group_ip);
+				if ((sendLen = sendto(socket, iot_json, strlen(iot_json), 0, &to, sizeof(struct sockaddr))) < 0) {
+					WLAN_SCEN_ERR("ERROR: sendto %s\n", multicast_group_ip);
+				} else {
+					WLAN_SCEN_MSG("sendto - %d bytes to %s:%d\n", sendLen, multicast_group_ip, multicast_port);
+				}
+			}
+			vTaskDelay(1000);
+		}
+	} else if (socket != -1) {
+		WLAN_SCEN_ERR("ERROR: socket = -1\r\n");
+		close(socket);
+	}
 	free(iot_json);
+	close(socket);
 	vTaskDelete(NULL);
 }
 
+static int ota_server_port = 3000;
+static char ota_server_host[INET_ADDRSTRLEN] = "192.168.43.2";
 static void ota_httpc_process_thread(void *param)
 {
 	int ret = -1;
 
-	ret = http_update_ota((char *)server_host, server_port, (char *)"api/uploadfile");
+	ret = http_update_ota((char *)ota_server_host, ota_server_port, (char *)"api/uploadfile");
 
 	http_ota_status = OTA_STATE_DOWNLOAD_FW_COMPLETED;
 
@@ -307,6 +294,19 @@ static void ota_start_cb(struct httpd_conn *conn)
 			WLAN_SCEN_MSG("[OTA] Received start OTA signal from UI.\r\n");
 			if (http_ota_status == OTA_STATE_RECV_START_SIGNAL) {
 				WLAN_SCEN_MSG("[OTA] Change Status.\r\n");
+				struct sockaddr_in client_addr;
+				socklen_t addr_len = sizeof(client_addr);
+				if (getpeername(conn->sock, (struct sockaddr *)&client_addr, &addr_len) == -1) {
+					printf("getpeername failed\r\n");
+					goto endofota;
+				} else {
+					if (inet_ntop(AF_INET, &client_addr.sin_addr, ota_server_host, sizeof(ota_server_host)) != NULL) {
+						printf("Client IP address: %s\n", ota_server_host);
+					} else {
+						printf("Client IP address failed\n");
+						goto endofota;
+					}
+				}
 				if (xTaskCreate(ota_httpc_process_thread, (const char *)"ota_httpc_process_thread", 1024, NULL, tskIDLE_PRIORITY + 7, NULL) != pdPASS) {
 					http_ota_status = OTA_STATE_IDLE;
 					WLAN_SCEN_ERR("\n\r[%s] Create update task failed", __FUNCTION__);
@@ -1083,7 +1083,7 @@ int wifi_enable_ap_mode(const char *ssid, const char *password, int channel, int
 	}
 #endif
 #endif
-
+	terminate_signal = 0;
 	WLAN_SCEN_MSG("AI glass Enable Wi-Fi with AP mode\r\n");
 	extern rtw_mode_t wifi_mode;
 	if (wifi_mode == RTW_MODE_AP && wifi_is_running(WLAN0_IDX)) {
@@ -1153,6 +1153,12 @@ int wifi_enable_ap_mode(const char *ssid, const char *password, int channel, int
 #endif
 
 set_http:
+#if defined(HTTP_OTA_TEST) && HTTP_OTA_TEST
+	if (xTaskCreate(ota_multicast_send_thread, (const char *)"ota_multicast_send_thread", 1024, NULL, tskIDLE_PRIORITY + 5,  NULL) != pdPASS) {
+		WLAN_SCEN_ERR("\n\r[%s] Create update task failed", __FUNCTION__);
+		return WLAN_SET_FAIL;
+	}
+#endif
 	if (!httpd_is_running()) {
 		httpd_reg_page_callback((char *)"/media/*", media_getfile_cb);
 		httpd_reg_page_callback((char *)"/pingpong", pingpong_cb);
@@ -1179,12 +1185,6 @@ set_http:
 			httpd_clear_page_callbacks();
 			return WLAN_SET_FAIL;
 		}
-#if defined(HTTP_OTA_TEST) && HTTP_OTA_TEST
-		if (xTaskCreate(ota_httpc_send_thread, (const char *)"ota_httpc_send_thread", 1024, NULL, tskIDLE_PRIORITY + 5, NULL) != pdPASS) {
-			WLAN_SCEN_ERR("\n\r[%s] Create update task failed", __FUNCTION__);
-			return WLAN_SET_FAIL;
-		}
-#endif
 	}
 	return WLAN_SET_OK;
 }
@@ -1197,6 +1197,8 @@ int wifi_disable_ap_mode(void)
 	//while (httpd_is_running()) {
 	//vTaskDelay(1);
 	//}
+	terminate_signal = 1;
+
 	WLAN_SCEN_MSG("http service disable= %lu\r\n", mm_read_mediatime_ms());
 	if (!wifi_off()) {
 		return WLAN_SET_OK;

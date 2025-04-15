@@ -190,6 +190,7 @@ typedef struct {
 
 	int *cali_iq_addr;		// Add for store input calibration iq data
 
+	int isp_tnr_en;
 } __attribute__((aligned(32))) hal_isp_adapter_t;
 
 
@@ -274,9 +275,9 @@ typedef struct {
 	int colot_temperature;
 
 	int y_average;
-    uint32_t white_num;
-    uint32_t rg_sum;
-    uint32_t bg_sum;
+	uint32_t white_num;
+	uint32_t rg_sum;
+	uint32_t bg_sum;
 
 	int hdr_mode;
 	int sensor_fps;
@@ -285,9 +286,9 @@ typedef struct {
 
 	u32 time_stamp;
 
-    uint32_t wdr_hist_contrast;
-    uint32_t wdr_hist_contrast_origin;
-    uint32_t reserved;
+	uint32_t wdr_hist_contrast;
+	uint32_t wdr_hist_contrast_origin;
+	uint32_t reserved;
 
 } isp_statis_meta_t;
 
@@ -329,7 +330,7 @@ typedef struct {
 
 typedef struct {
 	isp_grid_t grid;
-	uint8_t bitmap[ISP_MASK_GRID_CELLS/8];
+	uint8_t bitmap[ISP_MASK_GRID_CELLS / 8];
 
 } isp_grid_mask_entry_t;
 
@@ -383,9 +384,9 @@ struct isp_iq_cali {
 	struct isp_iq_cali_nlsc nlsc;
 } __attribute__((packed));
 
-struct isp_iq_nlsc_point_t { 
-    int32_t x; 
-    int32_t y; 
+struct isp_iq_nlsc_point_t {
+	int32_t x;
+	int32_t y;
 };
 
 struct verify_ctrl_config {
@@ -418,6 +419,10 @@ struct verify_ctrl_config {
 #define RTSV_SENSOR_MIRROR_FLIP   0xF020   // bit 0: MIRROR, bit 1: Flip
 #define RTSV_AE_MIN_FPS           0xF021
 #define RTSV_AE_MAX_FPS           0xF022
+
+// ISP_ZOOM_FILTER_COEF_NUM+ISP_ZOOM_FILTER_COEF_ALIGNMENT_DUMMY=32
+#define ISP_ZOOM_FILTER_COEF_NUM  20
+#define ISP_ZOOM_COEF_ALIGNMENT_DUMMY 12
 
 void *isp_soc_start(hal_isp_adapter_t *isp_adpt);
 int isp_open_stream(hal_isp_adapter_t *isp_adpt, uint8_t stream_id, uint32_t init_raw);
@@ -466,5 +471,6 @@ int hal_isp_get_verify_info(struct verify_ctrl_config *v_cfg);
 void hal_isp_verify_path_config_buf(void);
 void hal_isp_verify_path_trigger(u32 delay_ms);
 int hal_isp_tuning_iq_nlsc(struct verify_ctrl_config v_cfg);
+void hal_isp_set_zoom_filter_coeff(u8* buff);
 
 #endif /* HAL_RTL8735B_LIB_SOURCE_RAM_VIDEO_ISP_HAL_ISP_H_ */

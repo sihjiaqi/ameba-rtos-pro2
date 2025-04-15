@@ -72,6 +72,11 @@ typedef struct {
 	udta_box_callback_t udta_box_cb;  // Callback function
 } udta_callback_t;
 
+typedef struct mp4_timelapse_params_s {
+	uint32_t capture_interval;
+	uint32_t record_fps;
+} mp4_timelapse_params_t;
+
 typedef struct mp4_param_s {
 	uint32_t width;
 	uint32_t height;
@@ -183,10 +188,12 @@ typedef struct _mp4_context {
 	unsigned    char *udta_box;
 	int udta_size;
 	udta_callback_t callback;
+	mp4_timelapse_params_t timelapse_params;
 } mp4_context, *pmp4_context;
 
 void mp4_muxer_init(pmp4_context mp4_ctx);
 void set_mp4_fatfs_param(pmp4_context mp4_ctx, fatfs_sd_params_t *fatfs_param);
+int mp4_set_timelapse_param(pmp4_context mp4_ctx, mp4_timelapse_params_t *timelapse_params);
 
 u8 mp4_is_recording(pmp4_context mp4_ctx);
 int mp4_start_record(pmp4_context mp4_ctx, int file_num);

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.6)
 enable_language(C CXX ASM)
 
 #Find the uart command library
-set(UARTCMD_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/src/common_basics/libcommbasics.cmake")
+set(UARTCMD_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/src/common_basics/source/libcommbasics.cmake")
 
 #message(STATUS "${UARTCMD_CMAKE_PATH}")
 if(EXISTS "${UARTCMD_CMAKE_PATH}")
@@ -72,7 +72,7 @@ list(
     ${CMAKE_CURRENT_LIST_DIR}/src/gyrosensor/mpu6050/interface
     ${CMAKE_CURRENT_LIST_DIR}/src/gyrosensor/mpu6050/example
     ${CMAKE_CURRENT_LIST_DIR}/src/gyrosensor/icm42670p/src
-    ${CMAKE_CURRENT_LIST_DIR}/src/common_basics
+    ${CMAKE_CURRENT_LIST_DIR}/src/common_basics/include
 )
 
 list(
