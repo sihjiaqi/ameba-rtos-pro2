@@ -217,6 +217,7 @@ static void ai_glass_get_power_down(uartcmdpacket_t *param)
 		goto endofpowerdown;
 	}
 	int ret = 0;
+	wifi_disable_ap_mode();
 	// Save filelist to EMMC
 	ai_glass_init_external_disk();
 	ret = extdisk_save_file_cntlist();

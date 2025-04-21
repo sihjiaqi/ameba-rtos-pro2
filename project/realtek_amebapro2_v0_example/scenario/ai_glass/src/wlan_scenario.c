@@ -1191,15 +1191,17 @@ set_http:
 
 int wifi_disable_ap_mode(void)
 {
-	WLAN_SCEN_MSG("AI glass wifi_disable_ap_mode\r\n");
-	httpd_stop();
-	while (httpd_is_running()) {
-		vTaskDelay(1);
-	}
-	WLAN_SCEN_MSG("http service disable\r\n");
+	WLAN_SCEN_MSG("AI glass wifi_disable_ap_mode= %lu\r\n", mm_read_mediatime_ms());
+	//WLAN_SCEN_MSG("dhcp stop start= %lu\r\n", mm_read_mediatime_ms());
+	//httpd_stop();
+	//while (httpd_is_running()) {
+	//vTaskDelay(1);
+	//}
+	WLAN_SCEN_MSG("http service disable= %lu\r\n", mm_read_mediatime_ms());
 	if (!wifi_off()) {
 		return WLAN_SET_OK;
 	}
+	WLAN_SCEN_MSG("wlan off done= %lu\r\n", mm_read_mediatime_ms());
 	return WLAN_SET_FAIL;
 }
 
