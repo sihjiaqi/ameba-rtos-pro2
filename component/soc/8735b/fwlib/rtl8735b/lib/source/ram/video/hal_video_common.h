@@ -556,9 +556,22 @@ typedef struct {
 	u32 IDRuserData;
 	u32 IDRuserDataDuration;		// Based on IDR frame 0: every
 	u32 JPGuserData;
+
 	u32 *axi_buf_cfg;
 
-	u32 rsvd[39];   //When add new element, please reduce same rsvd size
+	u32 init_raw;
+	u32 verify_addr0;
+	u32 verify_addr1;
+	u32 verify_ylen;
+	u32 verify_uvlen;
+	u32 verify_nlsc_rcenter_x;
+	u32 verify_nlsc_rcenter_y;
+	u32 verify_nlsc_gcenter_x;
+	u32 verify_nlsc_gcenter_y;
+	u32 verify_nlsc_bcenter_x;
+	u32 verify_nlsc_bcenter_y;
+	
+	u32 rsvd[28];   //When add new element, please reduce same rsvd size
 
 } __attribute__((aligned(32))) commandLine_s;
 

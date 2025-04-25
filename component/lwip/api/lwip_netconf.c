@@ -130,6 +130,19 @@ struct netif xnetif[NET_IF_NUM]; /* network interface structure */
 
 int lwip_init_done = 0;
 
+/*
+The lwip_compatibilty_enabled is used to configure the lwip settings, each bit controls one aspect.
+bit 0: (0(default): default enable LWIP set_ip function, 1: disable LWIP set_ip function)
+*/
+int lwip_compatibilty_enabled;
+
+#define lwip_compatibility_is_enable(a,b) ((a & b) ? 1 : 0)
+
+void LwIP_set_compatibilty_enable(int compatibilty_enabled)
+{
+	lwip_compatibilty_enabled = compatibilty_enabled;
+}
+
 void LwIP_Init(void)
 {
 	struct ip_addr ipaddr;
@@ -856,6 +869,12 @@ void LwIP_SetDNS(struct ip_addr *dns)
 
 void LwIP_SetIP(uint8_t idx, u32_t addr, u32_t netmask_addr, u32_t gw_addr)
 {
+
+	if (lwip_compatibility_is_enable(lwip_compatibilty_enabled, BIT(0))) {
+		printf("[LwIP_SetIP] lwip_compatibility_is_enable return;\n\r");
+		return;
+	}
+
 	struct netif *pnetif = &xnetif[idx];
 	struct ip_addr ipaddr;
 	struct ip_addr netmask;

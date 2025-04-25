@@ -32,6 +32,7 @@
 #define UART_TX                     PA_2
 #define UART_RX                     PA_3
 #define UART_BAUDRATE               2000000 //115200 //2000000 //3750000 //4000000
+#define POWER_DOWN_TIMEOUT          700     // 700ms
 
 // Definition for UPDATE TYPE
 #define UPDATE_DEFAULT_SNAPSHOT     1
@@ -208,10 +209,10 @@ static void ai_glass_get_query_info(uartcmdpacket_t *param)
 static void ai_glass_get_power_down(uartcmdpacket_t *param)
 {
 	uint8_t result = AI_GLASS_CMD_COMPLETE;
-	AI_GLASS_INFO("get UART_RX_OPC_CMD_POWER_DOWN\r\n");
+	AI_GLASS_INFO("get UART_RX_OPC_CMD_POWER_DOWN %lu\r\n", mm_read_mediatime_ms());
 	// Wait until the video is down
-	if (xSemaphoreTake(video_proc_sema, 0) != pdTRUE) {
-		AI_GLASS_WARN("AI glass is snapshot or record, current snapshot busy fail\r\n");
+	if (xSemaphoreTake(video_proc_sema, POWER_DOWN_TIMEOUT) != pdTRUE) {
+		AI_GLASS_WARN("AI glass is snapshot or record, power down fail %lu\r\n", mm_read_mediatime_ms());
 		result = AI_GLASS_BUSY;
 		uart_resp_get_power_down(param, result);
 		goto endofpowerdown;
@@ -221,13 +222,13 @@ static void ai_glass_get_power_down(uartcmdpacket_t *param)
 	// Save filelist to EMMC
 	ai_glass_init_external_disk();
 	ret = extdisk_save_file_cntlist();
-	AI_GLASS_MSG("Save FILE Cnt List status: %d\r\n", ret);
+	AI_GLASS_MSG("Save FILE Cnt List status: %d, %lu\r\n", ret, mm_read_mediatime_ms());
 	// Todo: get power down command
 	uart_resp_get_power_down(param, result);
 	xSemaphoreGive(video_proc_sema);
 endofpowerdown:
 
-	AI_GLASS_INFO("end of UART_RX_OPC_CMD_POWER_DOWN\r\n");
+	AI_GLASS_INFO("end of UART_RX_OPC_CMD_POWER_DOWN %lu\r\n", mm_read_mediatime_ms());
 }
 
 static void ai_glass_get_power_state(uartcmdpacket_t *param)
@@ -355,10 +356,16 @@ static void ai_glass_set_gps(uartcmdpacket_t *param)
 	AI_GLASS_INFO("get UART_RX_OPC_CMD_SET_GPS\r\n");
 	uint32_t gps_week, gps_seconds = 0;
 	float gps_latitude, gps_longitude, gps_altitude = 0;
-	uart_parser_gps_data(param, &gps_week, &gps_seconds, &gps_latitude, &gps_longitude, &gps_altitude);
+	if (param->uart_pkt.length >= 34) {
+		uart_parser_gps_data(param, &gps_week, &gps_seconds, &gps_latitude, &gps_longitude, &gps_altitude);
 
-	media_filesystem_setup_gpstime(gps_week, gps_seconds);
-	media_filesystem_setup_gpscoordinate(gps_latitude, gps_longitude, gps_altitude);
+		AI_GLASS_INFO("gps_week = %d, %x\r\n", gps_week, gps_week);
+		AI_GLASS_INFO("gps_seconds = %d, %x\r\n", gps_seconds, gps_seconds);
+		media_filesystem_setup_gpstime(gps_week, gps_seconds);
+		media_filesystem_setup_gpscoordinate(gps_latitude, gps_longitude, gps_altitude);
+	} else {
+		AI_GLASS_INFO("Invlaid GPS length = %d < 34\r\n", param->uart_pkt.length);
+	}
 
 	uint8_t status = AI_GLASS_CMD_COMPLETE;
 	uart_resp_gps_data(param, status);
@@ -507,7 +514,7 @@ static void ai_glass_get_trans_pic_stop(uartcmdpacket_t *param)
 {
 	AI_GLASS_INFO("get UART_RX_OPC_CMD_TRANS_PIC_STOP\r\n");
 	uart_resp_get_trans_pic_stop(param);
-	AI_GLASS_INFO("end of UART_RX_OPC_CMD_TRANS_PIC_STOP\r\n");
+	AI_GLASS_INFO("end of UART_RX_OPC_CMD_TRANS_PIC_STOP %lu\r\n", mm_read_mediatime_ms());
 }
 
 static void mp4_send_response_callback(struct tmrTimerControl *parm)
@@ -545,7 +552,7 @@ static void mp4_send_response_callback(struct tmrTimerControl *parm)
 			xSemaphoreGive(send_response_timermutex);
 		}
 	} else {
-		AI_GLASS_ERR("Send  timer mutex failed\r\n");
+		AI_GLASS_ERR("Send timer mutex failed\r\n");
 	}
 	return;
 }
@@ -676,9 +683,8 @@ static void ai_glass_delete_all_file(uartcmdpacket_t *param)
 
 static void ai_glass_get_sd_info(uartcmdpacket_t *param)
 {
-	AI_GLASS_INFO("get UART_RX_OPC_CMD_GET_SD_INFO\r\n");
+	AI_GLASS_INFO("get UART_RX_OPC_CMD_GET_SD_INFO %lu\r\n", mm_read_mediatime_ms());
 	ai_glass_init_external_disk();
-	AI_GLASS_INFO("get UART_RX_OPC_CMD_GET_SD_INFO\r\n");
 	uint64_t device_used_bytes = fatfs_get_used_space_byte();
 	uint64_t device_total_bytes = device_used_bytes + fatfs_get_free_space_byte();
 	uint32_t device_used_Kbytes = (uint32_t)(device_used_bytes / 1024);
@@ -686,7 +692,7 @@ static void ai_glass_get_sd_info(uartcmdpacket_t *param)
 
 	uart_resp_get_sd_info(param, device_total_Kbytes, device_used_Kbytes);
 	AI_GLASS_MSG("Get device memory: %lu/%luKB\r\n", device_used_Kbytes, device_total_Kbytes);
-	AI_GLASS_INFO("end of UART_RX_OPC_CMD_GET_SD_INFO\r\n");
+	AI_GLASS_INFO("end of UART_RX_OPC_CMD_GET_SD_INFO %lu\r\n", mm_read_mediatime_ms());
 }
 
 static void ai_glass_set_ap_mode(uartcmdpacket_t *param)
@@ -754,8 +760,8 @@ static rxopc_item_t rx_opcode_basic_items[ ] = {
 	{UART_RX_OPC_CMD_QUERY_INFO,        {true,  false, ai_glass_get_query_info},        {NULL, NULL}},
 	{UART_RX_OPC_CMD_POWER_DOWN,        {true,  false, ai_glass_get_power_down},        {NULL, NULL}},
 	{UART_RX_OPC_CMD_GET_POWER_STATE,   {true,  false, ai_glass_get_power_state},       {NULL, NULL}},
-	{UART_RX_OPC_CMD_UPDATE_WIFI_INFO,  {false, false, ai_glass_update_wifi_info},      {NULL, NULL}},
-	{UART_RX_OPC_CMD_SET_GPS,           {false, false, ai_glass_set_gps},               {NULL, NULL}},
+	{UART_RX_OPC_CMD_UPDATE_WIFI_INFO,  {true,  false, ai_glass_update_wifi_info},      {NULL, NULL}},
+	{UART_RX_OPC_CMD_SET_GPS,           {true,  false, ai_glass_set_gps},               {NULL, NULL}},
 	{UART_RX_OPC_CMD_SNAPSHOT,          {false, false, ai_glass_snapshot},              {NULL, NULL}},
 	{UART_RX_OPC_CMD_GET_FILE_NAME,     {false, false, ai_glass_get_file_name},         {NULL, NULL}},
 	{UART_RX_OPC_CMD_GET_PICTURE_DATA,  {false, false, ai_glass_get_pic_data},          {NULL, NULL}},
@@ -898,6 +904,7 @@ void fENABLEAPMODE(void *arg)
 	if (argc) {
 		int apmode_enable = atoi(argv[1]);
 		if (apmode_enable) {
+			ai_glass_init_external_disk();
 			AI_GLASS_MSG("Command enable AP mode start = %lu\r\n", mm_read_mediatime_ms());
 			if (wifi_enable_ap_mode(AI_GLASS_AP_SSID, AI_GLASS_AP_PASSWORD, AI_GLASS_AP_CHANNEL, 20) == WLAN_SET_OK) {
 				deinitial_media(); // For saving power

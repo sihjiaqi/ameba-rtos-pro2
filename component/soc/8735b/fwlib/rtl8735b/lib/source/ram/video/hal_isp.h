@@ -274,9 +274,9 @@ typedef struct {
 	int colot_temperature;
 
 	int y_average;
-	uint32_t white_num;
-	uint32_t rg_sum;
-	uint32_t bg_sum;
+    uint32_t white_num;
+    uint32_t rg_sum;
+    uint32_t bg_sum;
 
 	int hdr_mode;
 	int sensor_fps;
@@ -285,9 +285,9 @@ typedef struct {
 
 	u32 time_stamp;
 
-	uint32_t wdr_hist_contrast;
-	uint32_t wdr_hist_contrast_origin;
-	uint32_t reserved;
+    uint32_t wdr_hist_contrast;
+    uint32_t wdr_hist_contrast_origin;
+    uint32_t reserved;
 
 } isp_statis_meta_t;
 
@@ -322,13 +322,14 @@ typedef struct {
 	int start_y;
 	int width;
 	int height;
+	int rsv[4];
 
 } isp_crop_t;
 
 
 typedef struct {
 	isp_grid_t grid;
-	uint8_t bitmap[ISP_MASK_GRID_CELLS / 8];
+	uint8_t bitmap[ISP_MASK_GRID_CELLS/8];
 
 } isp_grid_mask_entry_t;
 
@@ -382,6 +383,21 @@ struct isp_iq_cali {
 	struct isp_iq_cali_nlsc nlsc;
 } __attribute__((packed));
 
+struct isp_iq_nlsc_point_t { 
+    int32_t x; 
+    int32_t y; 
+};
+
+struct verify_ctrl_config {
+	u32 verify_addr0;
+	u32 verify_addr1;
+	u32 verify_ylen;
+	u32 verify_uvlen;
+	struct isp_iq_nlsc_point_t verify_r_center;
+	struct isp_iq_nlsc_point_t verify_g_center;
+	struct isp_iq_nlsc_point_t verify_b_center;
+};
+
 #define RTSV_BRIGHTNESS           0x0000
 #define RTSV_CONTRAST             0x0001
 #define RTSV_SATURATION           0x0002
@@ -404,7 +420,7 @@ struct isp_iq_cali {
 #define RTSV_AE_MAX_FPS           0xF022
 
 void *isp_soc_start(hal_isp_adapter_t *isp_adpt);
-int isp_open_stream(hal_isp_adapter_t *isp_adpt, uint8_t stream_id);
+int isp_open_stream(hal_isp_adapter_t *isp_adpt, uint8_t stream_id, uint32_t init_raw);
 int isp_close_stream(hal_isp_adapter_t *isp_adpt, uint8_t stream_id);
 int isp_get_stream_cnt(uint8_t stream_id);
 uint32_t isp_get_frame_buffer(uint8_t stream_id);
@@ -421,7 +437,7 @@ int hal_isp_set_sensor_mode(int mode, int fps); // mode 0: linear 1: hdr
 int hal_isp_get_sensor_mode(int *mode, int *fps); // mode 0: linear 1: hdr
 
 int hal_isp_get_af_statis(af_statis_t *p_af_statis);
-int hal_isp_get_ae_statis(ae_statis_t *p_ae_statis);
+int hal_isp_get_ae_statis(ae_statis_t *p_ae_statis, enum ISP_AE_statis_type type);
 int hal_isp_get_awb_statis(awb_statis_t *p_awb_statis);
 int hal_isp_get_ctrl(uint32_t id, int *value);
 int hal_isp_set_ctrl(uint32_t id, int *value);
@@ -445,5 +461,10 @@ u32 hal_isp_get_init_frame_rate(void);
 void hal_isp_set_init_axi_buf(u32 *buf);
 u32 hal_isp_get_axi_buf_size(enum ISP_Buf_Cfg_Order sel);
 u32 hal_isp_get_axi_buf_addr(enum ISP_Buf_Cfg_Order sel);
+void hal_isp_set_verify_info(struct verify_ctrl_config v_cfg);
+int hal_isp_get_verify_info(struct verify_ctrl_config *v_cfg);
+void hal_isp_verify_path_config_buf(void);
+void hal_isp_verify_path_trigger(u32 delay_ms);
+int hal_isp_tuning_iq_nlsc(struct verify_ctrl_config v_cfg);
 
 #endif /* HAL_RTL8735B_LIB_SOURCE_RAM_VIDEO_ISP_HAL_ISP_H_ */

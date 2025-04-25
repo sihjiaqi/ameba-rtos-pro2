@@ -504,6 +504,12 @@ unsigned char wifi_country_code_to_channel_plan(unsigned char band_type, unsigne
 }
 
 //----------------------------------------------------------------------------//
+static uint8_t bForece_ap_compatibilty_enabled = 0;
+void wifi_set_ap_compatibilty_enabled(unsigned int  ap_compatibilty_enabled)
+{
+	bForece_ap_compatibilty_enabled = 1;
+	wifi_user_config.ap_compatibilty_enabled = ap_compatibilty_enabled;
+}
 
 void wifi_set_user_config(void)
 {
@@ -555,7 +561,11 @@ void wifi_set_user_config(void)
 
 	wifi_user_config.bCheckDestAddress = (u8)_TRUE;
 
-	wifi_user_config.ap_compatibilty_enabled = 0x0F;
+	if (!bForece_ap_compatibilty_enabled) {
+		wifi_user_config.ap_compatibilty_enabled = 0x0F;
+	} else {
+		printf("force wifi_user_config.ap_compatibilty_enabled: %x\n\r", wifi_user_config.ap_compatibilty_enabled);
+	}
 
 #ifdef CONFIG_LAYER2_ROAMING
 	wifi_user_config.max_roaming_times = 2;
@@ -1067,6 +1077,9 @@ exit:
 int wifi_scan_networks(rtw_scan_param_t *scan_param, unsigned char block)
 {
 	int ret = RTW_SUCCESS;
+	//default 2G & 5G support channel list
+	u8 channel_list_2G[13] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+	u8 channel_list_5G[25] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165};
 
 	if (scan_param == NULL) {
 		RTW_API_INFO("SCAN param not set!\n");
@@ -1086,6 +1099,18 @@ int wifi_scan_networks(rtw_scan_param_t *scan_param, unsigned char block)
 	}
 	/* lock 2s to forbid suspend under scan */
 	rtw_wakelock_timeout(2 * 1000);
+
+	if (scan_param->band == 1) {
+		if (scan_param->channel_list_num == 0) {
+			scan_param->channel_list_num = 13;
+			scan_param->channel_list = channel_list_2G;
+		}
+	} else if (scan_param->band == 2) {
+		if (scan_param->channel_list_num == 0) {
+			scan_param->channel_list_num = 25;
+			scan_param->channel_list = channel_list_5G;
+		}
+	}
 
 	ret = rtw_wx_set_scan(scan_param, block);
 

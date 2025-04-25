@@ -1488,6 +1488,12 @@ void wifi_get_wpa_global_PMK(unsigned char *key);
  * @return  None
  */
 void wifi_set_active_keepalive_enabled(u8 active_keepalive_enabled);
+
+/**
+ * @brief  wifi set ap_compatibilty_enabled
+ * @return  None
+ */
+void wifi_set_ap_compatibilty_enabled(unsigned int  ap_compatibilty_enabled);
 /**
 * @}
 */
