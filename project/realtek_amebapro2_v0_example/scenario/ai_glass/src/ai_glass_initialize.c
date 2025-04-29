@@ -33,6 +33,7 @@
 #define UART_RX                     PA_3
 #define UART_BAUDRATE               2000000 //115200 //2000000 //3750000 //4000000
 #define POWER_DOWN_TIMEOUT          700     // 700ms
+#define UART_PROTOCAL_VERSION       0
 
 // Definition for UPDATE TYPE
 #define UPDATE_DEFAULT_SNAPSHOT     1
@@ -820,6 +821,7 @@ void ai_glass_service_thread(void *param)
 	}
 	xSemaphoreGive(video_proc_sema);
 	uart_fun_regist();
+	uart_service_set_protocal_version(UART_PROTOCAL_VERSION);
 	uart_service_start(1);
 	AI_GLASS_MSG("uart service send data time %lu\r\n", mm_read_mediatime_ms());
 exit:

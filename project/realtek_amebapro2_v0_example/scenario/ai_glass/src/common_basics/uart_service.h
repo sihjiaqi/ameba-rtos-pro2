@@ -200,7 +200,9 @@ int uart_service_set_buff_size(uint16_t buff_size);
 uint16_t uart_service_get_buff_size(void);
 int uart_service_set_pic_size(uint16_t pic_size);
 uint16_t uart_service_get_pic_size(void);
+int uart_service_set_protocal_version(uint8_t protocal_version);
 uint8_t uart_service_get_protocal_version(void);
+int uart_service_set_wifi_ic_type(uint8_t wifi_ic_type);
 uint8_t uart_service_get_wifi_ic_type(void);
 
 #endif //#ifndef __UART_SERVICE_H__
