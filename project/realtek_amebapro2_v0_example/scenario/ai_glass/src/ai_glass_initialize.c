@@ -25,6 +25,7 @@
 #include "mmf2_mediatime_8735b.h"
 #include "mmf2_dbg.h"
 #include "ai_glass_dbg.h"
+#include "lwip_netconf.h"
 
 // Configure for ai glass
 #define ENABLE_TEST_CMD             1   // For the tester to test some hardware
@@ -34,6 +35,11 @@
 #define UART_BAUDRATE               2000000 //115200 //2000000 //3750000 //4000000
 #define POWER_DOWN_TIMEOUT          700     // 700ms
 #define UART_PROTOCAL_VERSION       0
+
+// Definition for STA mode
+#define MAX_SSID_LEN                33
+#define MAX_PASSWORD_LEN            65
+#define PSCAN_FAST_SURVEY           0x02
 
 // Definition for UPDATE TYPE
 #define UPDATE_DEFAULT_SNAPSHOT     1
@@ -60,6 +66,8 @@ static uint8_t temp_rfile_name[MAX_FILENAME_SIZE] = {0};
 static void ai_glass_init_external_disk(void);
 static void ai_glass_init_ram_disk(void);
 void ai_glass_log_init(void);
+
+static const uint8_t version[4] = {0, 0, 0, 0};
 
 // These functions are for testing ai glass with mass storage
 #include "usb.h"
@@ -203,7 +211,7 @@ static void parser_snapshot_pkt2param(ai_glass_snapshot_param_t *snap_buf, uint8
 static void ai_glass_get_query_info(uartcmdpacket_t *param)
 {
 	AI_GLASS_INFO("get UART_RX_OPC_CMD_QUERY_INFO\r\n");
-	uart_resp_get_query_info(param);
+	uart_resp_get_query_info(param, version);
 	AI_GLASS_INFO("end of UART_RX_OPC_CMD_QUERY_INFO\r\n");
 }
 
@@ -421,16 +429,42 @@ static void ai_glass_snapshot(uartcmdpacket_t *param)
 
 			int ret = lifetime_snapshot_initialize();
 			if (ret == 0) {
-				char *cur_time_str = (char *)media_filesystem_get_current_time_string();
-				char temp_buffer[128] = {0};
-				uint8_t lifetime_snap_name[128] = {0};
-				extdisk_generate_unique_filename("lifesnap_", cur_time_str, ".jpg", (char *)temp_buffer, 128);
-				snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_buffer, ".jpg");
-				free(cur_time_str);
-				if (lifetime_snapshot_take((const char *)lifetime_snap_name) == 0) {
-					status = AI_GLASS_CMD_COMPLETE;
+				uint8_t file_name_length = snapshot_param[0];
+				char *cur_time_str = NULL;
+				char temp_buffer[160] = {0};
+				uint8_t lifetime_snap_name[160] = {0};
+				if (file_name_length > 0 && file_name_length <= 125) {
+					cur_time_str = malloc(file_name_length + 1);
+					if (cur_time_str) {
+						memset(cur_time_str, 0, file_name_length + 1);
+						memcpy(cur_time_str, snapshot_param + 1, file_name_length);
+						extdisk_generate_unique_filename("", cur_time_str, ".jpg", (char *)temp_buffer, 128);
+						snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_buffer, ".jpg");
+						free(cur_time_str);
+						if (lifetime_snapshot_take((const char *)lifetime_snap_name) == 0) {
+							status = AI_GLASS_CMD_COMPLETE;
+						} else {
+							status = AI_GLASS_PROC_FAIL;
+						}
+					} else {
+						AI_GLASS_ERR("no memory for lifetime snapshot file name\r\n");
+						status = AI_GLASS_PROC_FAIL;
+					}
 				} else {
-					status = AI_GLASS_PROC_FAIL;
+					cur_time_str = (char *)media_filesystem_get_current_time_string();
+					if (cur_time_str) {
+						extdisk_generate_unique_filename("PICTURE_0_0_", cur_time_str, ".jpg", (char *)temp_buffer, 128);
+						snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_buffer, ".jpg");
+						free(cur_time_str);
+						if (lifetime_snapshot_take((const char *)lifetime_snap_name) == 0) {
+							status = AI_GLASS_CMD_COMPLETE;
+						} else {
+							status = AI_GLASS_PROC_FAIL;
+						}
+					} else {
+						AI_GLASS_ERR("no memory for lifetime snapshot file name\r\n");
+						status = AI_GLASS_PROC_FAIL;
+					}
 				}
 				AI_GLASS_MSG("wait for lifetime snapshot deinit\r\n");
 				while (lifetime_snapshot_deinitialize()) {
@@ -565,6 +599,19 @@ static void ai_glass_record_start(uartcmdpacket_t *param)
 	AI_GLASS_MSG("Opcode (hex): 0x%x\r\n", query_pkt->opcode);
 	uint8_t record_start_status = AI_GLASS_CMD_COMPLETE;
 
+	//UART PARSER_RECORDING_FILENAME_AND_LENGTH
+	uint8_t record_length = 0;
+	uint8_t *record_filename = uart_parser_recording_video_info(param, &record_length);
+	const char *filename_str;
+	char filename_buf[160] = {0}; // One extra for null terminator
+
+	if (record_filename && record_length < sizeof(filename_buf)) {
+		memcpy(filename_buf, record_filename, record_length);
+		filename_buf[record_length] = '\0'; // Null-terminate
+
+		filename_str = filename_buf;
+	}
+
 	//Initialize function has a timer that constantly reads the status of MP4.
 	if (xSemaphoreTake(video_proc_sema, 0) == pdTRUE) {
 		AI_GLASS_MSG("Record start = %lu\r\n", mm_read_mediatime_ms());
@@ -574,7 +621,7 @@ static void ai_glass_record_start(uartcmdpacket_t *param)
 			uart_resp_record_start(record_start_status);
 			xSemaphoreGive(video_proc_sema);
 		} else if (current_state == STATE_IDLE) {
-			int ret = lifetime_recording_initialize();
+			int ret = lifetime_recording_initialize(record_length, (const char *)filename_str);
 			// Save filelist to EMMC
 			if (send_response_timer != NULL && ret == 0) {
 				extdisk_save_file_cntlist();
@@ -732,6 +779,131 @@ static void ai_glass_set_ap_mode(uartcmdpacket_t *param)
 	AI_GLASS_MSG("end of UART_RX_OPC_CMD_SET_WIFI_MODE %lu\r\n", mm_read_mediatime_ms());
 }
 
+// For UART_RX_OPC_CMD_SET_STA_MODE
+static void ai_glass_set_sta_mode(uartcmdpacket_t *param)
+{
+	AI_GLASS_MSG("get UART_RX_OPC_CMD_SET_STA_MODE %lu\r\n", mm_read_mediatime_ms());
+
+	// Step 1: Disable AP mode
+	if (wifi_disable_ap_mode() == WLAN_SET_OK) {
+		AI_GLASS_INFO("AP mode disabled successfully.\r\n");
+	} else {
+		AI_GLASS_INFO("Fail to disable AP mode.\r\n");
+	}
+
+	// Step 2: Get params and set variables
+	uartpacket_t *query_pkt = (uartpacket_t *) & (param->uart_pkt);
+
+	for (int i = 0; i < 128; i++) {
+		AI_GLASS_INFO("%02X ", query_pkt->data_buf[i]);
+		if ((i + 1) % 16 == 0) {
+			AI_GLASS_INFO("\n");    // Pretty print in 16-byte rows
+		}
+	}
+	AI_GLASS_INFO("\n");
+
+	uint8_t mode = query_pkt->data_buf[0];
+	uint8_t ssid_length = query_pkt->data_buf[1];
+	uint8_t channel = query_pkt->data_buf[40];
+	uint8_t password_length = query_pkt->data_buf[41];
+
+	if (ssid_length > MAX_SSID_LEN) {
+		ssid_length = MAX_SSID_LEN;
+	}
+
+	if (password_length > MAX_PASSWORD_LEN) {
+		password_length = MAX_PASSWORD_LEN;
+	}
+
+	AI_GLASS_INFO("Mode: %d\n", mode);
+	AI_GLASS_INFO("SSID Length: %d\n", ssid_length);
+	AI_GLASS_INFO("Channel: %d\n", channel);
+	AI_GLASS_INFO("Password Length: %d\n", password_length);
+
+	// Create a buffer for the SSID (null-terminated)
+	unsigned char ssid[MAX_SSID_LEN + 1]; // +1 for '\0'
+
+	// Copy bytes 2 ~ (2 + ssid_length - 1)
+	memcpy(ssid, &query_pkt->data_buf[2], ssid_length);
+
+	// Null-terminate if you're treating it as a string
+	ssid[ssid_length] = '\0';
+
+	unsigned char password[MAX_PASSWORD_LEN + 1];
+	memcpy(password, &query_pkt->data_buf[42], password_length);
+
+	password[password_length] = '\0';
+
+	uint32_t security_type_value;
+	memcpy(&security_type_value, &query_pkt->data_buf[36], sizeof(security_type_value));
+
+	AI_GLASS_INFO("From UART Password: %s\r\n", password);
+
+	rtw_network_info_t connect_param = {0};
+	memcpy(connect_param.ssid.val, ssid, ssid_length);
+	connect_param.password = (unsigned char *)password;
+	connect_param.password_len = strlen((const char *)password);
+	connect_param.ssid.len = strlen((const char *)ssid);
+	connect_param.security_type = (rtw_security_t)security_type_value;
+
+	uint8_t result = AI_GLASS_CMD_COMPLETE;
+
+	AI_GLASS_INFO("SSID: %s\r\n", connect_param.ssid.val);
+	AI_GLASS_INFO("Password: %s\r\n", connect_param.password);
+	AI_GLASS_INFO("Password length: %d\r\n", connect_param.password_len);
+	AI_GLASS_INFO("SSID length: %d\r\n", connect_param.ssid.len);
+	AI_GLASS_INFO("Security Type: %d\r\n", security_type_value);
+
+	if (channel != 0) {
+		connect_param.channel = (unsigned char)channel;
+		connect_param.pscan_option = (unsigned char)PSCAN_FAST_SURVEY;
+	}
+
+	if (mode == 1) {
+		//Init emmc
+		ai_glass_init_external_disk();
+		AI_GLASS_MSG("wifi_enable_sta_mode %lu\r\n", mm_read_mediatime_ms());
+
+		if (wifi_enable_sta_mode(&connect_param, 5, 2) == WLAN_SET_OK) {
+			result = AI_GLASS_CMD_COMPLETE;
+		} else {
+			result = AI_GLASS_PROC_FAIL;
+		}
+		u32 ip = *(u32 *)LwIP_GetIP(0);
+		// Send response
+		uint8_t sta_status = result;
+		// Get the IP address here:
+		uint8_t ip0 = (ip) & 0xFF; // Highest byte (first)
+		uint8_t ip1 = (ip >> 8) & 0xFF;
+		uint8_t ip2 = (ip >> 16) & 0xFF;
+		uint8_t ip3 = (ip >> 24) & 0xFF; // Lowest byte (last)
+
+		AI_GLASS_INFO("ip_idx0: %d\r\n", ip0);
+		AI_GLASS_INFO("ip_idx1: %d\r\n", ip1);
+		AI_GLASS_INFO("ip_idx2: %d\r\n", ip2);
+		AI_GLASS_INFO("ip_idx3: %d\r\n", ip3);
+		uart_resp_set_sta_mode(param, sta_status, ip0, ip1, ip2, ip3);
+
+	} else if (mode == 0) {
+		// Disable AP mode
+		if (wifi_disable_sta_mode() == WLAN_SET_OK) {
+			AI_GLASS_INFO("STA mode disabled successfully.\r\n");
+		} else {
+			AI_GLASS_INFO("Fail to disable STA mode.\r\n");
+		}
+	} else {
+		result = AI_GLASS_PARAMS_ERR;
+		AI_GLASS_INFO("ERROR: Mode received for STA Mode is not 0 or 1.\r\n");
+		uart_resp_set_sta_mode(param, result, 0, 0, 0, 0);
+	}
+
+	AI_GLASS_MSG("UART_RX_OPC_CMD_SET_STA_MODE set mode %d done %lu\r\n", mode, mm_read_mediatime_ms());
+	if (mode == 1 && result == AI_GLASS_CMD_COMPLETE) {
+		deinitial_media(); // To save power
+	}
+	AI_GLASS_MSG("end of UART_RX_OPC_CMD_SET_STA_MODE %lu\r\n", mm_read_mediatime_ms());
+}
+
 static void ai_glass_get_pic_data_sliding_window(uartcmdpacket_t *param)
 {
 	AI_GLASS_INFO("get UART_RX_OPC_CMD_GET_PICTURE_DATA SLIDING WINDOW\r\n");
@@ -775,6 +947,7 @@ static rxopc_item_t rx_opcode_basic_items[ ] = {
 	{UART_RX_OPC_CMD_DELETE_ALL_FILES,  {false, false, ai_glass_delete_all_file},       {NULL, NULL}},
 	{UART_RX_OPC_CMD_GET_SD_INFO,       {false, false, ai_glass_get_sd_info},           {NULL, NULL}},
 	{UART_RX_OPC_CMD_SET_WIFI_MODE,     {false, false, ai_glass_set_ap_mode},           {NULL, NULL}},
+	{UART_RX_OPC_CMD_SET_STA_MODE,      {false, false, ai_glass_set_sta_mode},          {NULL, NULL}},
 
 	{UART_RX_OPC_CMD_GET_PICTURE_DATA_SLIDING_WINDOW,       {false, false, ai_glass_get_pic_data_sliding_window},       {NULL, NULL}},
 	{UART_RX_OPC_CMD_GET_PICTURE_DATA_SLIDING_WINDOW_ACK,   {false, true, ai_glass_get_pic_data_sliding_window_ack},    {NULL, NULL}},
@@ -925,6 +1098,115 @@ void fENABLEAPMODE(void *arg)
 	}
 }
 
+void fENABLESTAMODE(void *arg)
+{
+	int argc = 0;
+	char *argv[MAX_ARGC] = {0};
+
+	uint8_t mode  = 0;
+	uint8_t ssid_length = MAX_SSID_LEN; //default max value
+	char ssid[MAX_SSID_LEN + 1] = {0}; // +1 for null terminator
+	uint32_t security_type = 0;
+	uint8_t channel = 0;
+	uint8_t resv_val = 0;
+	uint8_t password_length = MAX_PASSWORD_LEN; //default max value
+	char password[MAX_PASSWORD_LEN + 1] = {0}; // +1 for null terminator
+
+	argc = parse_param(arg, argv);
+
+	if (argc) {
+		printf("argc = %d\r\n", argc);
+		//mode
+		if (atoi(argv[1]) == 0) {
+			mode = 0;
+			printf("Set wifi STA idle mode\r\n");
+		} else {
+			mode = 1;
+			printf("Set wifi STA mode\r\n");
+		}
+
+		// ssid length
+		if ((atoi(argv[2]) > 0) && (atoi(argv[2]) < MAX_SSID_LEN)) {
+			ssid_length = atoi(argv[2]);
+		} else {
+			ssid_length = MAX_SSID_LEN;
+			printf("Negative parameter set for SSID Length OR parameter is above than MAX_SSID_LEN, set to default max length for SSID\r\n");
+		}
+
+		// ssid string
+		if (argc > 3 && strlen(argv[3]) <= ssid_length) {
+			strncpy(ssid, argv[3], ssid_length);
+			ssid[ssid_length] = '\0'; // Ensure null-termination
+			printf("SSID: %s\r\n", ssid);
+		} else {
+			printf("SSID not provided or exceeds specified length\r\n");
+		}
+
+		// security type (right now security type do not check which values are valid)
+		if (argc > 4) {
+			security_type = (uint32_t) strtoul(argv[4], NULL, 0); // supports hex (e.g., 0x00400004)
+			printf("Security Type: 0x%08X\r\n", security_type);
+		} else {
+			security_type = 0; // RTW_SECURITY_OPEN
+			printf("No Security Type provided, defaulting to OPEN (0x%08X)\r\n", security_type);
+		}
+
+		// channel (right now no validation of channel yet)
+		if (argc > 5) {
+			channel = atoi(argv[5]);
+			printf("Channel: %d\r\n", channel);
+		}
+
+		// password length
+		if ((argc > 6) && (atoi(argv[6]) > 0) && (atoi(argv[6]) < MAX_PASSWORD_LEN)) {
+			password_length = atoi(argv[6]);
+			printf("Password Length: %d\r\n", password_length);
+		} else {
+			password_length = MAX_PASSWORD_LEN;
+			printf("Negative parameter set for Password Length OR parameter is above than MAX_PASSWORD_LEN, set to default max length for Password\r\n");
+		}
+
+		// Password string
+		if (argc > 7 && strlen(argv[7]) <= password_length) {
+			strncpy(password, argv[7], password_length);
+			password[password_length] = '\0'; // Ensure null-termination
+			printf("Password: %s\r\n", password);
+		} else {
+			printf("Password not provided or exceeds specified length\r\n");
+		}
+
+		rtw_network_info_t connect_param = {0};
+		memcpy(connect_param.ssid.val, ssid, ssid_length);
+		connect_param.password = (unsigned char *)password;
+		connect_param.password_len = strlen((const char *)password);
+		connect_param.ssid.len = strlen((const char *)ssid);
+		connect_param.security_type = (rtw_security_t)security_type;
+
+		if (channel != 0) {
+			connect_param.channel = (unsigned char)channel;
+			connect_param.pscan_option = (unsigned char)PSCAN_FAST_SURVEY;
+		}
+
+		if (mode == 1) {
+			AI_GLASS_MSG("Command enable STA mode start = %lu\r\n", mm_read_mediatime_ms());
+			if (wifi_enable_sta_mode(&connect_param, 5, 2) == WLAN_SET_OK) {
+				deinitial_media(); // For saving power
+				AI_GLASS_MSG("Command enable STA mode OK = %lu\r\n", mm_read_mediatime_ms());
+			} else {
+				AI_GLASS_MSG("Command enable STA mode failed = %lu\r\n", mm_read_mediatime_ms());
+			}
+		} else {
+			AI_GLASS_MSG("Command disable AP mode start = %lu\r\n", mm_read_mediatime_ms());
+			if (wifi_disable_sta_mode() == WLAN_SET_OK) {
+				AI_GLASS_MSG("Command disable STA mode OK = %lu\r\n", mm_read_mediatime_ms());
+			} else {
+				AI_GLASS_MSG("Command disable STA mode failed = %lu\r\n", mm_read_mediatime_ms());
+			}
+		}
+
+	}
+}
+
 void fLFSNAPSHOT(void *arg)
 {
 	if (xSemaphoreTake(video_proc_sema, 0) != pdTRUE) {
@@ -967,6 +1249,7 @@ log_item_t at_ai_glass_items[ ] = {
 	{"AT+AIGLASSMSC",       fENABLEMSC,     {NULL, NULL}},
 	{"AT+AIGLASSSETAPMODE", fENABLEAPMODE,  {NULL, NULL}},
 	{"AT+AIGLASSLFSNAP",    fLFSNAPSHOT,    {NULL, NULL}},
+	{"AT+AIGLASSSETSTAMODE", fENABLESTAMODE, {NULL, NULL}},
 };
 #endif
 void ai_glass_log_init(void)

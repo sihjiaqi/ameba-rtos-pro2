@@ -42,6 +42,7 @@ typedef enum {
 	UART_RX_OPC_CMD_GET_PICTURE_DATA_SLIDING_WINDOW     = 0x8413,
 	UART_RX_OPC_CMD_GET_PICTURE_DATA_SLIDING_WINDOW_ACK = 0x8414,
 	UART_RX_OPC_CMD_SET_WIFI_FW_ROLLBACK                = 0x8415,
+	UART_RX_OPC_CMD_SET_STA_MODE                        = 0x8416,
 	UART_RX_OPC_CMD_SET_SYS_UPGRADE     = 0x8430,
 } uart_rx_opc_e;
 
@@ -72,6 +73,7 @@ typedef enum {
 	UART_TX_OPC_RESP_SET_WIFI_MODE      = 0x8412,
 	UART_TX_OPC_RESP_GET_PICTURE_DATA_SLIDING_WINDOW    = 0x8413,
 	UART_TX_OPC_RESP_SET_WIFI_FW_UPGRADE                = 0x8415,
+	UART_TX_OPC_RESP_SET_STA_MODE                       = 0x8416,
 	UART_TX_OPC_RESP_REQUEST_SET_SYS_UPGRADE            = 0x8430,
 } uart_tx_opc_e;
 
@@ -204,5 +206,11 @@ int uart_service_set_protocal_version(uint8_t protocal_version);
 uint8_t uart_service_get_protocal_version(void);
 int uart_service_set_wifi_ic_type(uint8_t wifi_ic_type);
 uint8_t uart_service_get_wifi_ic_type(void);
+
+#define AI_GLASS_BT_ROLE_SINGLE 0
+#define AI_GLASS_BT_ROLE_LEFT   1
+#define AI_GLASS_BT_ROLE_RIGHT  2
+int uart_service_set_bt_role(uint8_t bt_role);
+uint8_t uart_service_get_bt_role(void);
 
 #endif //#ifndef __UART_SERVICE_H__

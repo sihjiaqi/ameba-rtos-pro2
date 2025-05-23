@@ -47,6 +47,8 @@ enum {
 	WLAN_SET_OK         = 0,
 };
 
+int wifi_enable_sta_mode(rtw_network_info_t *connect_param, int timeout, int retry);
+int wifi_disable_sta_mode(void);
 int wifi_enable_ap_mode(const char *ssid, const char *password, int channel, int timeout);
 int wifi_disable_ap_mode(void);
 int wifi_get_ap_setting(rtw_softap_info_t *wifi_cfg);

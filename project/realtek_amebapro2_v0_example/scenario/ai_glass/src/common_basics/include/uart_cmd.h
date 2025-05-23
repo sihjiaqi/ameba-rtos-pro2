@@ -15,7 +15,7 @@ typedef int (*file_read_func)(uint8_t *buf, uint32_t read_size, FILE *ai_snapsho
 typedef int (*file_eof_func)(FILE *ai_snapshot_rfile);
 
 // For UART_RX_OPC_CMD_QUERY_INFO
-int uart_resp_get_query_info(uartcmdpacket_t *param);
+int uart_resp_get_query_info(uartcmdpacket_t *param, const uint8_t *version);
 
 // For UART_RX_OPC_CMD_POWER_DOWN
 int uart_resp_get_power_down(uartcmdpacket_t *param, uint8_t result);
@@ -45,6 +45,7 @@ int uart_resp_get_pic_data(uartcmdpacket_t *param, FILE *ai_snapshot_rfile, file
 int uart_resp_get_trans_pic_stop(uartcmdpacket_t *param);
 
 // For UART_RX_OPC_CMD_RECORD_START
+uint8_t *uart_parser_recording_video_info(uartcmdpacket_t *param, uint8_t *record_length);
 int uart_resp_record_start(uint8_t resp_stat);
 
 // For UART_TX_OPC_RESP_RECORD_CONT
@@ -71,11 +72,17 @@ int uart_resp_get_sd_info(uartcmdpacket_t *param, uint32_t total_Kbytes, uint32_
 // For UART_RX_OPC_CMD_SET_WIFI_MODE
 int uart_resp_set_ap_mode(uartcmdpacket_t *param, rtw_softap_info_t *wifi_cfg, uint32_t ssid_buf_size, uint32_t password_buf_size, uint8_t result);
 
+// For UART_RX_OPC_CMD_SET_STA_MODE
+int uart_resp_set_sta_mode(uartcmdpacket_t *param, uint8_t status, uint8_t ip_index0, uint8_t ip_index1, uint8_t ip_index2, uint8_t ip_index3);
+
 // For UART_RX_OPC_CMD_GET_PICTURE_DATA_SLIDING_WINDOW
 int uart_resp_get_pic_data_sliding_window(uartcmdpacket_t *param, FILE *ai_snapshot_rfile, file_seek_func file_seek, file_read_func file_read,
 		file_eof_func file_eof);
 
 // For UART_RX_OPC_CMD_GET_PICTURE_DATA_SLIDING_WINDOW_ACK
 int uart_resp_get_pic_data_sliding_window_ack(uartcmdpacket_t *param);
+
+// For UART_RX_OPC_CMD_SET_SYS_UPGRADE
+void *uart_parser_version(uartcmdpacket_t *param, uint8_t *version);
 
 #endif //#ifndef __UART_CMD_H__

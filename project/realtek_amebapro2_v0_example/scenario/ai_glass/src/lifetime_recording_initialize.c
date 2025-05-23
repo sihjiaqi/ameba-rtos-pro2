@@ -631,13 +631,19 @@ static int lr_mp4_error_cb(void *parm)
 	return 0;
 }
 
-int lifetime_recording_initialize(void)
+int lifetime_recording_initialize(uint8_t length, const char *filename)
 {
 	AI_GLASS_INFO("================LifeTime Record start========================== = %lu\r\n", mm_read_mediatime_ms());
-	char *cur_time_str = (char *)media_filesystem_get_current_time_string();
-	extdisk_generate_unique_filename("liferecord_", cur_time_str, ".mp4", life_recording_name, 128);
-	free(cur_time_str);
 
+	uint8_t record_length = length;
+
+	if (record_length == 0) {
+		char *cur_time_str = (char *)media_filesystem_get_current_time_string();
+		extdisk_generate_unique_filename("VIDEO_0_0_", cur_time_str, ".mp4", life_recording_name, 128);
+		free(cur_time_str);
+	} else {
+		snprintf(life_recording_name, sizeof(life_recording_name), "%s", filename);
+	}
 	// work around, pre-open the mp4 for the file system to count the mp4 file
 	char life_record_name[128] = {0};
 	snprintf(life_record_name, sizeof(life_record_name), "%s.mp4", life_recording_name);

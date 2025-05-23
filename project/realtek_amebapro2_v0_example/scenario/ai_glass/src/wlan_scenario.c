@@ -17,7 +17,7 @@
 #include "mmf2_mediatime_8735b.h"
 #include "ai_glass_media.h"
 
-#define USE_HTTPS                   0
+#define USE_HTTPS                   1
 #define DELETE_FILE_AFTER_UPLOAD    1
 #define HTTP_PORT                   8080 //80
 #define HTTPS_PORT                  8080 //443
@@ -1057,6 +1057,97 @@ int wifi_get_ap_setting(rtw_softap_info_t *wifi_cfg)
 	return WLAN_SET_FAIL;
 }
 
+// TODO function to enable station mode and at the same time start the http server
+int wifi_enable_sta_mode(rtw_network_info_t *connect_param, int timeout, int retry)
+{
+	WLAN_SCEN_MSG("AI glass deinit dhcps %lu\r\n", mm_read_mediatime_ms());
+	dhcps_deinit();
+	WLAN_SCEN_MSG("AI glass wifi_enable_station_mode %lu\r\n", mm_read_mediatime_ms());
+
+#if CONFIG_INIT_NET
+#if CONFIG_LWIP_LAYER
+	// Initilaize the LwIP stack, if the LwIP is not initalized yet
+	extern int lwip_init_done;
+	if (!lwip_init_done) {
+		LwIP_Init();
+	}
+#endif
+#endif
+	if (connect_param->channel != 0) {
+		wifi_set_channel(connect_param->channel);
+	}
+
+	if (wifi_on(RTW_MODE_STA) < 0) {
+		AI_GLASS_ERR("\n\r[SET STATION MODE] ERROR: wifi_on failed\n");
+		return -1;
+	}
+
+	WLAN_SCEN_MSG("wifi_connect cmd done %lu\r\n", mm_read_mediatime_ms());
+
+	wifi_config_autoreconnect(1, retry, timeout);
+
+	wifi_connect(connect_param, 1);
+
+	WLAN_SCEN_MSG("wifi_connect cmd done %lu\r\n", mm_read_mediatime_ms());
+
+	WLAN_SCEN_MSG("LwIP_DHCP start %lu\r\n", mm_read_mediatime_ms());
+	LwIP_DHCP(0, DHCP_START);
+	WLAN_SCEN_MSG("LwIP_DHCP start done %lu\r\n", mm_read_mediatime_ms());
+
+	WLAN_SCEN_MSG("Connecting to station... %lu\r\n", mm_read_mediatime_ms());
+
+	// while (!((wifi_get_join_status() == RTW_JOINSTATUS_SUCCESS) && (*(u32 *)LwIP_GetIP(0) != IP_ADDR_INVALID))) {
+	//     //printf("wifi_get_join_status = %d, RTW_JOINSTATUS_SUCCESS= %d\r\n", wifi_get_join_status(), RTW_JOINSTATUS_SUCCESS);
+	//     printf("LwIP_GetIP(0) = %d, IP_ADDR_INVALID= %d\r\n", *(u32 *)LwIP_GetIP(0), IP_ADDR_INVALID);
+	// 	vTaskDelay(50);
+	// }
+
+	WLAN_SCEN_MSG("STA mode start done\r\n");
+	//ensure terminate signal is 0
+	terminate_signal = 0;
+
+#if defined(HTTP_OTA_TEST) && HTTP_OTA_TEST
+	if (xTaskCreate(ota_multicast_send_thread, (const char *)"ota_multicast_send_thread", 1024, NULL, tskIDLE_PRIORITY + 5, NULL) != pdPASS) {
+		WLAN_SCEN_ERR("\n\r[%s] Create update task failed", __FUNCTION__);
+		return WLAN_SET_FAIL;
+	}
+#endif
+
+	WLAN_SCEN_MSG("STA mode start dhcp server %lu\r\n", mm_read_mediatime_ms());
+	// Setup httpd server
+	if (!httpd_is_running()) {
+		httpd_reg_page_callback((char *)"/media/*", media_getfile_cb);
+		httpd_reg_page_callback((char *)"/pingpong", pingpong_cb);
+		httpd_reg_page_callback((char *)"/media-list", media_list_cb);
+		httpd_reg_page_callback((char *)"/save-ota-files", save_ota_files_to_emmc_from_http_cb);
+#if defined(HTTP_OTA_TEST) && HTTP_OTA_TEST
+		httpd_reg_page_callback((char *)"/ota-start", ota_start_cb);
+#endif
+		httpd_setup_priority(5);
+		httpd_setup_idle_timeout(HTTPD_CONNECT_TIMEOUT);
+#if defined(USE_HTTPS) && USE_HTTPS
+		// Set up http certificate
+		if (httpd_setup_cert(HTTPS_SRC_CRT, HTTPS_SRC_KEY, HTTPS_CA_CRT) != 0) {
+			WLAN_SCEN_ERR("\nERROR: httpd_setup_cert\n");
+			return WLAN_SET_FAIL;
+		}
+#endif
+#if defined(USE_HTTPS) && USE_HTTPS
+		if (httpd_start(HTTPS_PORT, 5, 4096, HTTPD_THREAD_SINGLE, HTTPD_SECURE_TLS) != 0) {
+#else
+		if (httpd_start(HTTP_PORT, 5, 4096, HTTPD_THREAD_SINGLE, HTTPD_SECURE_NONE) != 0) {
+#endif
+			WLAN_SCEN_ERR("ERROR: httpd_start");
+
+			httpd_clear_page_callbacks();
+			return WLAN_SET_FAIL;
+		}
+
+	}
+	WLAN_SCEN_MSG("STA mode start dhcp server done %lu\r\n", mm_read_mediatime_ms());
+	return WLAN_SET_OK;
+}
+
 int wifi_disable_ap_mode(void);
 
 static void deinit_dhcp(void)
@@ -1197,6 +1288,25 @@ int wifi_disable_ap_mode(void)
 	//while (httpd_is_running()) {
 	//vTaskDelay(1);
 	//}
+	terminate_signal = 1;
+
+	WLAN_SCEN_MSG("http service disable= %lu\r\n", mm_read_mediatime_ms());
+	if (!wifi_off()) {
+		return WLAN_SET_OK;
+	}
+	WLAN_SCEN_MSG("wlan off done= %lu\r\n", mm_read_mediatime_ms());
+	return WLAN_SET_FAIL;
+}
+
+int wifi_disable_sta_mode(void)
+{
+	WLAN_SCEN_MSG("AI glass wifi_disable_sta_mode= %lu\r\n", mm_read_mediatime_ms());
+	// WLAN_SCEN_MSG("dhcp stop start= %lu\r\n", mm_read_mediatime_ms());
+	// httpd_stop();
+	// while (httpd_is_running()) {
+	// vTaskDelay(1);
+	// }
+
 	terminate_signal = 1;
 
 	WLAN_SCEN_MSG("http service disable= %lu\r\n", mm_read_mediatime_ms());
