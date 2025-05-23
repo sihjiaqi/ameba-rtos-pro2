@@ -20,3 +20,6 @@
 [submodule "component/application/audio_afe"]
 	path = component/application/audio_afe
 	url = ssh://rswn.sdlc.rd.realtek.com:29418/protected/wn_iot_audio/afe
+[submodule "project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics/source"]
+	path = project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics/source
+	url = https://github.com/Ameba-AIoT/AI-glass-source-code.git
