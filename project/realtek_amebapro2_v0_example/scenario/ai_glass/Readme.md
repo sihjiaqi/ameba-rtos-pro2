@@ -72,7 +72,7 @@ This scenario is intended for a templete for ai glass scenario
 		.resolution = 0,
 		.width = sensor_params[USE_SENSOR].sensor_width,
 		.height = sensor_params[USE_SENSOR].sensor_height,
-		.bps = 2 * 1024 * 1024,
+		.bps = 12 * 1024 * 1024, // extend to a larger size
 		.fps = sensor_params[USE_SENSOR].sensor_fps,
 		.gop = sensor_params[USE_SENSOR].sensor_fps,
 		.rc_mode = 2,
@@ -95,11 +95,18 @@ This scenario is intended for a templete for ai glass scenario
 	video_boot_stream.init_isp_items.init_contrast = 50;     //Default:50
 	video_boot_stream.init_isp_items.init_flicker = 1;        //Default:1
 	video_boot_stream.init_isp_items.init_hdr_mode = 0;       //Default:0
-	video_boot_stream.init_isp_items.init_mirrorflip = 0xf3;  //Mirror and flip
+	video_boot_stream.init_isp_items.init_mirrorflip = 0xf0;  //No flip and no mirror
 	video_boot_stream.init_isp_items.init_saturation = 50;    //Default:50
 	video_boot_stream.init_isp_items.init_wdr_level = 50;     //Default:50
 	video_boot_stream.init_isp_items.init_wdr_mode = 2;       //Default:0
 	video_boot_stream.init_isp_items.init_mipi_mode = 0;	  //Default:0
+Note init_mirrorflip is the isp default mirror or flip:
+0xf0: no flip and no mirror
+0xf1: flip
+0xf2: mirror
+0xf3: flip and mirror
+for example:
+	video_boot_stream.init_isp_items.init_mirrorflip = 0xf3;  //flip and mirror
 
 5. \project\realtek_amebapro2_v0_example\inc\sensor.h
 - in sensor_params, modify [SENSOR_SC5356]       = {2592, 1944, 24},
