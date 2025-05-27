@@ -674,6 +674,11 @@ int wifi_on(rtw_mode_t mode)
 			if (wifi_user_config.channel_plan) {
 				rltk_wlan_change_channel_plan(wifi_user_config.channel_plan);
 			}
+			if (wifi_user_config.chn2_4G_num || wifi_user_config.chn5G_num) {
+				wifi_set_customized_channel_plan(wifi_user_config.chn2_4G, wifi_user_config.chn2_4G_num,
+												 wifi_user_config.chn5G, wifi_user_config.chn5G_num,
+												 wifi_user_config.regulation2_4G, wifi_user_config.regulation5G);
+			}
 #if CONFIG_AUTO_RECONNECT
 			//setup reconnection flag
 			wifi_config_autoreconnect(1, AUTO_RECONNECT_COUNT, AUTO_RECONNECT_INTERVAL);
@@ -1115,6 +1120,12 @@ int wifi_scan_networks(rtw_scan_param_t *scan_param, unsigned char block)
 	ret = rtw_wx_set_scan(scan_param, block);
 
 	return ret;
+}
+
+int wifi_set_customized_channel_plan(customized_chl_cfg_t *chnlplan2_4, u8 chnlnum2_4, customized_chl_cfg_t *chnlplan5, u8 chnlnum5, u8 regulation2_4,
+									 u8 regulation5)
+{
+	return rltk_wlan_set_customized_channel_plan(chnlplan2_4, chnlnum2_4, chnlplan5, chnlnum5, regulation2_4, regulation5, 0);
 }
 
 int wifi_get_scan_records(unsigned int *AP_num, char *scan_buf)

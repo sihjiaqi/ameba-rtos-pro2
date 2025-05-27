@@ -34,7 +34,7 @@
 #define UART_RX                     PA_3
 #define UART_BAUDRATE               2000000 //115200 //2000000 //3750000 //4000000
 #define POWER_DOWN_TIMEOUT          700     // 700ms
-#define UART_PROTOCAL_VERSION       0
+#define UART_PROTOCAL_VERSION       1
 
 // Definition for STA mode
 #define MAX_SSID_LEN                33
@@ -93,9 +93,9 @@ static void aiglass_mass_storage_init(void)
 		status = wait_usb_ready();
 		if (status != USBD_INIT_OK) {
 			if (status == USBD_NOT_ATTACHED) {
-				AI_GLASS_WARN("\r\n NO USB device attached\n");
+				AI_GLASS_WARN("NO USB device attached\r\n");
 			} else {
-				AI_GLASS_WARN("\r\n USB init fail\n");
+				AI_GLASS_WARN("USB init fail\r\n");
 			}
 			goto exit;
 		}
@@ -104,7 +104,7 @@ static void aiglass_mass_storage_init(void)
 			disk_operation = malloc(sizeof(struct msc_opts));
 		}
 		if (disk_operation == NULL) {
-			AI_GLASS_ERR("\r\n disk_operation malloc fail\n");
+			AI_GLASS_ERR("disk_operation malloc fail\r\n");
 			extern void _usb_deinit(void);
 			_usb_deinit();
 			goto exit;
@@ -430,42 +430,31 @@ static void ai_glass_snapshot(uartcmdpacket_t *param)
 			int ret = lifetime_snapshot_initialize();
 			if (ret == 0) {
 				uint8_t file_name_length = snapshot_param[0];
-				char *cur_time_str = NULL;
-				char temp_buffer[160] = {0};
+				char temp_record_filename_buffer[160] = {0};
 				uint8_t lifetime_snap_name[160] = {0};
 				if (file_name_length > 0 && file_name_length <= 125) {
-					cur_time_str = malloc(file_name_length + 1);
-					if (cur_time_str) {
-						memset(cur_time_str, 0, file_name_length + 1);
-						memcpy(cur_time_str, snapshot_param + 1, file_name_length);
-						extdisk_generate_unique_filename("", cur_time_str, ".jpg", (char *)temp_buffer, 128);
-						snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_buffer, ".jpg");
-						free(cur_time_str);
-						if (lifetime_snapshot_take((const char *)lifetime_snap_name) == 0) {
-							status = AI_GLASS_CMD_COMPLETE;
-						} else {
-							status = AI_GLASS_PROC_FAIL;
-						}
-					} else {
-						AI_GLASS_ERR("no memory for lifetime snapshot file name\r\n");
-						status = AI_GLASS_PROC_FAIL;
-					}
+					char uart_filename_str[160] = {0};
+					memset(uart_filename_str, 0, file_name_length + 1);
+					memcpy(uart_filename_str, snapshot_param + 1, file_name_length);
+					extdisk_generate_unique_filename("", uart_filename_str, ".jpg", (char *)temp_record_filename_buffer, 160);
+					snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_record_filename_buffer, ".jpg");
 				} else {
-					cur_time_str = (char *)media_filesystem_get_current_time_string();
+					char *cur_time_str = (char *)media_filesystem_get_current_time_string();
 					if (cur_time_str) {
-						extdisk_generate_unique_filename("PICTURE_0_0_", cur_time_str, ".jpg", (char *)temp_buffer, 128);
-						snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_buffer, ".jpg");
+						extdisk_generate_unique_filename("PICTURE_0_0_", cur_time_str, ".jpg", (char *)temp_record_filename_buffer, 160);
+						snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_record_filename_buffer, ".jpg");
 						free(cur_time_str);
+						} else {
+						AI_GLASS_WARN("no memory for lifetime snapshot file name\r\n");
+						extdisk_generate_unique_filename("PICTURE_0_0_", "19800101", ".jpg", (char *)temp_record_filename_buffer, 160);
+						}
+					}
 						if (lifetime_snapshot_take((const char *)lifetime_snap_name) == 0) {
 							status = AI_GLASS_CMD_COMPLETE;
 						} else {
 							status = AI_GLASS_PROC_FAIL;
 						}
-					} else {
-						AI_GLASS_ERR("no memory for lifetime snapshot file name\r\n");
-						status = AI_GLASS_PROC_FAIL;
-					}
-				}
+
 				AI_GLASS_MSG("wait for lifetime snapshot deinit\r\n");
 				while (lifetime_snapshot_deinitialize()) {
 					vTaskDelay(1);
@@ -600,16 +589,20 @@ static void ai_glass_record_start(uartcmdpacket_t *param)
 	uint8_t record_start_status = AI_GLASS_CMD_COMPLETE;
 
 	//UART PARSER_RECORDING_FILENAME_AND_LENGTH
-	uint8_t record_length = 0;
-	uint8_t *record_filename = uart_parser_recording_video_info(param, &record_length);
+	uint8_t record_filename_length = 0;
+	uint8_t *record_filename = uart_parser_recording_video_info(param, &record_filename_length);
 	const char *filename_str;
 	char filename_buf[160] = {0}; // One extra for null terminator
 
-	if (record_filename && record_length < sizeof(filename_buf)) {
-		memcpy(filename_buf, record_filename, record_length);
-		filename_buf[record_length] = '\0'; // Null-terminate
+	if (record_filename && record_filename_length < sizeof(filename_buf)) {
+		memcpy(filename_buf, record_filename, record_filename_length);
+		filename_buf[record_filename_length] = '\0'; // Null-terminate
 
 		filename_str = filename_buf;
+	}
+	//This is to make sure that if there is no record filename, the length will not be passed into the function lifetime_recording initialize.
+	else {
+		record_filename_length = 0;
 	}
 
 	//Initialize function has a timer that constantly reads the status of MP4.
@@ -621,7 +614,7 @@ static void ai_glass_record_start(uartcmdpacket_t *param)
 			uart_resp_record_start(record_start_status);
 			xSemaphoreGive(video_proc_sema);
 		} else if (current_state == STATE_IDLE) {
-			int ret = lifetime_recording_initialize(record_length, (const char *)filename_str);
+			int ret = lifetime_recording_initialize(record_filename_length, (const char *)filename_str);
 			// Save filelist to EMMC
 			if (send_response_timer != NULL && ret == 0) {
 				extdisk_save_file_cntlist();
@@ -797,10 +790,10 @@ static void ai_glass_set_sta_mode(uartcmdpacket_t *param)
 	for (int i = 0; i < 128; i++) {
 		AI_GLASS_INFO("%02X ", query_pkt->data_buf[i]);
 		if ((i + 1) % 16 == 0) {
-			AI_GLASS_INFO("\n");    // Pretty print in 16-byte rows
+			AI_GLASS_INFO("\r\n");    // Pretty print in 16-byte rows
 		}
 	}
-	AI_GLASS_INFO("\n");
+	AI_GLASS_INFO("\r\n");
 
 	uint8_t mode = query_pkt->data_buf[0];
 	uint8_t ssid_length = query_pkt->data_buf[1];
@@ -815,10 +808,10 @@ static void ai_glass_set_sta_mode(uartcmdpacket_t *param)
 		password_length = MAX_PASSWORD_LEN;
 	}
 
-	AI_GLASS_INFO("Mode: %d\n", mode);
-	AI_GLASS_INFO("SSID Length: %d\n", ssid_length);
-	AI_GLASS_INFO("Channel: %d\n", channel);
-	AI_GLASS_INFO("Password Length: %d\n", password_length);
+	AI_GLASS_INFO("Mode: %d\r\n", mode);
+	AI_GLASS_INFO("SSID Length: %d\r\n", ssid_length);
+	AI_GLASS_INFO("Channel: %d\r\n", channel);
+	AI_GLASS_INFO("Password Length: %d\r\n", password_length);
 
 	// Create a buffer for the SSID (null-terminated)
 	unsigned char ssid[MAX_SSID_LEN + 1]; // +1 for '\0'
@@ -842,8 +835,8 @@ static void ai_glass_set_sta_mode(uartcmdpacket_t *param)
 	rtw_network_info_t connect_param = {0};
 	memcpy(connect_param.ssid.val, ssid, ssid_length);
 	connect_param.password = (unsigned char *)password;
-	connect_param.password_len = strlen((const char *)password);
-	connect_param.ssid.len = strlen((const char *)ssid);
+	connect_param.password_len = password_length;
+	connect_param.ssid.len = ssid_length;
 	connect_param.security_type = (rtw_security_t)security_type_value;
 
 	uint8_t result = AI_GLASS_CMD_COMPLETE;
@@ -864,7 +857,7 @@ static void ai_glass_set_sta_mode(uartcmdpacket_t *param)
 		ai_glass_init_external_disk();
 		AI_GLASS_MSG("wifi_enable_sta_mode %lu\r\n", mm_read_mediatime_ms());
 
-		if (wifi_enable_sta_mode(&connect_param, 5, 2) == WLAN_SET_OK) {
+		if (wifi_enable_sta_mode(&connect_param, 100, 2) == WLAN_SET_OK) {
 			result = AI_GLASS_CMD_COMPLETE;
 		} else {
 			result = AI_GLASS_PROC_FAIL;
@@ -1014,7 +1007,7 @@ void ai_glass_init(void)
 static gyro_data_t gdata[100] = {0};
 void gyro_read_gsensor_thread(void *param)
 {
-	AI_GLASS_MSG("Test Gyro Sensor Type: TDK ICM42670P/ICM42607P\n");
+	AI_GLASS_MSG("Test Gyro Sensor Type: TDK ICM42670P/ICM42607P\r\n");
 	gyroscope_fifo_init();
 	while (1) {
 		int read_cnt = gyroscope_fifo_read(gdata, 100);
@@ -1178,8 +1171,8 @@ void fENABLESTAMODE(void *arg)
 		rtw_network_info_t connect_param = {0};
 		memcpy(connect_param.ssid.val, ssid, ssid_length);
 		connect_param.password = (unsigned char *)password;
-		connect_param.password_len = strlen((const char *)password);
-		connect_param.ssid.len = strlen((const char *)ssid);
+		connect_param.password_len = password_length;
+		connect_param.ssid.len = ssid_length;
 		connect_param.security_type = (rtw_security_t)security_type;
 
 		if (channel != 0) {
@@ -1189,7 +1182,7 @@ void fENABLESTAMODE(void *arg)
 
 		if (mode == 1) {
 			AI_GLASS_MSG("Command enable STA mode start = %lu\r\n", mm_read_mediatime_ms());
-			if (wifi_enable_sta_mode(&connect_param, 5, 2) == WLAN_SET_OK) {
+			if (wifi_enable_sta_mode(&connect_param, 100, 2) == WLAN_SET_OK) {
 				deinitial_media(); // For saving power
 				AI_GLASS_MSG("Command enable STA mode OK = %lu\r\n", mm_read_mediatime_ms());
 			} else {
@@ -1220,9 +1213,9 @@ void fLFSNAPSHOT(void *arg)
 	int ret = lifetime_snapshot_initialize();
 	if (ret == 0) {
 		char *cur_time_str = (char *)media_filesystem_get_current_time_string();
-		char temp_buffer[128] = {0};
-		uint8_t lifetime_snap_name[128] = {0};
-		extdisk_generate_unique_filename("lifesnap_", cur_time_str, ".jpg", (char *)temp_buffer, 128);
+		char temp_buffer[160] = {0};
+		uint8_t lifetime_snap_name[160] = {0};
+		extdisk_generate_unique_filename("lifesnap_", cur_time_str, ".jpg", (char *)temp_buffer, 160);
 		snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_buffer, ".jpg");
 		free(cur_time_str);
 		lifetime_snapshot_take((const char *)lifetime_snap_name);

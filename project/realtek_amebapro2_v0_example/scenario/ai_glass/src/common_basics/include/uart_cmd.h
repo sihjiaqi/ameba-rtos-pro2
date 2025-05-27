@@ -45,7 +45,7 @@ int uart_resp_get_pic_data(uartcmdpacket_t *param, FILE *ai_snapshot_rfile, file
 int uart_resp_get_trans_pic_stop(uartcmdpacket_t *param);
 
 // For UART_RX_OPC_CMD_RECORD_START
-uint8_t *uart_parser_recording_video_info(uartcmdpacket_t *param, uint8_t *record_length);
+uint8_t *uart_parser_recording_video_info(uartcmdpacket_t *param, uint8_t *record_filename_length);
 int uart_resp_record_start(uint8_t resp_stat);
 
 // For UART_TX_OPC_RESP_RECORD_CONT

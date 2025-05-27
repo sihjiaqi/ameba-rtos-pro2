@@ -1359,6 +1359,20 @@ int wifi_csi_report(u32 buf_len, u8 *csi_buf, u32 *len, rtw_csi_header_t *csi_he
 void wifi_set_scan_time(unsigned short active_to, unsigned short passive_to, unsigned short home_to, unsigned char probe_cnt);
 
 /**
+ * @brief  there is function for wifi_set_customized_channel_plan to set customer channel plan
+ * @param[in]  chnlplan2_4: Set 2.4g channel and scan type passive or active(refer to customized_chl_cfg)
+ * @param[in]  chnlnum2_4: The number of chanlplan2_4
+ * @param[in]  chnlplan5: Set 5g channel and scan type passive or active(refer to customized_chl_cfg)
+ * @param[in]  chnlnum5: The number of chanlplan5
+ * @param[in]  regulation2_4: The 2.4G regulation setting refers to REGULATION_TXPWR_LMT
+ * @param[in]  regulation5: The 5G regulation setting refers to REGULATION_TXPWR_LMT
+ * @return  If the function succeeds, the return value is 0.
+ * 	Otherwise, return 1.
+ */
+int wifi_set_customized_channel_plan(customized_chl_cfg_t *chnlplan2_4, u8 chnlnum2_4, customized_chl_cfg_t *chnlplan5, u8 chnlnum5, u8 regulation2_4,
+									 u8 regulation5);
+
+/**
  * @brief   set ping connectivity ip for wifi retention for wowlan mode
  *
  */

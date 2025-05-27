@@ -2550,7 +2550,7 @@ static int stbi_write_jpg_core_from_nv12(stbi__write_context *s, int width, int 
 
 							// Directly access and store Y component
 #if USE_Q16_15
-							Y[pos] = FLOAT_TO_Q16_15(dataY[p] - 128.0f);
+							Y[pos] = UINT8_TO_Q16_15(dataY[p]) - N128_Q16_15;
 #else
 							Y[pos] = dataY[p] - 128;
 #endif
@@ -2561,8 +2561,8 @@ static int stbi_write_jpg_core_from_nv12(stbi__write_context *s, int width, int 
 
 							// Access and store U and V components
 #if USE_Q16_15
-							U[pos] = FLOAT_TO_Q16_15(dataUV[uv_offset] - 128.0f);
-							V[pos] = FLOAT_TO_Q16_15(dataUV[uv_offset + 1] - 128.0f);
+							U[pos] = UINT8_TO_Q16_15(dataUV[uv_offset]) - N128_Q16_15;
+							V[pos] = UINT8_TO_Q16_15(dataUV[uv_offset + 1]) - N128_Q16_15;
 #else
 							U[pos] = dataUV[uv_offset] - 128;
 							V[pos] = dataUV[uv_offset + 1] - 128;

@@ -206,9 +206,9 @@ static void ota_multicast_send_thread(void *param)
 				to_sin->sin_port = htons(multicast_port);
 				to_sin->sin_addr.s_addr = inet_addr(multicast_group_ip);
 				if ((sendLen = sendto(socket, iot_json, strlen(iot_json), 0, &to, sizeof(struct sockaddr))) < 0) {
-					WLAN_SCEN_ERR("ERROR: sendto %s\n", multicast_group_ip);
+					WLAN_SCEN_ERR("ERROR: sendto %s\r\n", multicast_group_ip);
 				} else {
-					WLAN_SCEN_MSG("sendto - %d bytes to %s:%d\n", sendLen, multicast_group_ip, multicast_port);
+					WLAN_SCEN_MSG("sendto - %d bytes to %s:%d\r\n", sendLen, multicast_group_ip, multicast_port);
 				}
 			}
 			vTaskDelay(1000);
@@ -1079,12 +1079,12 @@ int wifi_enable_sta_mode(rtw_network_info_t *connect_param, int timeout, int ret
 
 	if (wifi_on(RTW_MODE_STA) < 0) {
 		AI_GLASS_ERR("\n\r[SET STATION MODE] ERROR: wifi_on failed\n");
-		return -1;
+		return WLAN_SET_FAIL;
 	}
 
 	WLAN_SCEN_MSG("wifi_connect cmd done %lu\r\n", mm_read_mediatime_ms());
 
-	wifi_config_autoreconnect(1, retry, timeout);
+	wifi_config_autoreconnect_ms(1, retry, timeout);
 
 	wifi_connect(connect_param, 1);
 
@@ -1095,12 +1095,6 @@ int wifi_enable_sta_mode(rtw_network_info_t *connect_param, int timeout, int ret
 	WLAN_SCEN_MSG("LwIP_DHCP start done %lu\r\n", mm_read_mediatime_ms());
 
 	WLAN_SCEN_MSG("Connecting to station... %lu\r\n", mm_read_mediatime_ms());
-
-	// while (!((wifi_get_join_status() == RTW_JOINSTATUS_SUCCESS) && (*(u32 *)LwIP_GetIP(0) != IP_ADDR_INVALID))) {
-	//     //printf("wifi_get_join_status = %d, RTW_JOINSTATUS_SUCCESS= %d\r\n", wifi_get_join_status(), RTW_JOINSTATUS_SUCCESS);
-	//     printf("LwIP_GetIP(0) = %d, IP_ADDR_INVALID= %d\r\n", *(u32 *)LwIP_GetIP(0), IP_ADDR_INVALID);
-	// 	vTaskDelay(50);
-	// }
 
 	WLAN_SCEN_MSG("STA mode start done\r\n");
 	//ensure terminate signal is 0
@@ -1263,7 +1257,7 @@ set_http:
 #if defined(USE_HTTPS) && USE_HTTPS
 		// Set up http certificate
 		if (httpd_setup_cert(HTTPS_SRC_CRT, HTTPS_SRC_KEY, HTTPS_CA_CRT) != 0) {
-			WLAN_SCEN_ERR("\nERROR: httpd_setup_cert\n");
+			WLAN_SCEN_ERR("ERROR: httpd_setup_cert\r\n");
 			return WLAN_SET_FAIL;
 		}
 #endif

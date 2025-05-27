@@ -150,7 +150,7 @@ static void append_gyro_data(gyro_data_list_t *list, gyro_data_t new_data)
 {
 	gyro_data_node_t *new_node = (gyro_data_node_t *)malloc(sizeof(gyro_data_node_t));
 	if (new_node == NULL) {
-		AI_GLASS_ERR("Memory allocation failed!\n");
+		AI_GLASS_ERR("Memory allocation failed!\r\n");
 		return;
 	}
 
@@ -368,8 +368,8 @@ static void print_gyro_data_list(gyro_data_list_t *list)
 {
 	gyro_data_node_t *head = list->head;
 	gyro_data_node_t *tail = list->tail;
-	AI_GLASS_MSG("head Timestamp: %lu\n", head->data.timestamp);
-	AI_GLASS_MSG("tail Timestamp: %lu\n", tail->data.timestamp);
+	AI_GLASS_MSG("head Timestamp: %lu\r\n", head->data.timestamp);
+	AI_GLASS_MSG("tail Timestamp: %lu\r\n", tail->data.timestamp);
 }
 
 static void save_gyro_to_exdisk_thread(void *param)
@@ -631,18 +631,17 @@ static int lr_mp4_error_cb(void *parm)
 	return 0;
 }
 
-int lifetime_recording_initialize(uint8_t length, const char *filename)
+int lifetime_recording_initialize(uint8_t record_filename_length, const char *filename)
 {
 	AI_GLASS_INFO("================LifeTime Record start========================== = %lu\r\n", mm_read_mediatime_ms());
+	uint8_t recording_filename_length = record_filename_length;
 
-	uint8_t record_length = length;
-
-	if (record_length == 0) {
+	if (recording_filename_length == 0) {
 		char *cur_time_str = (char *)media_filesystem_get_current_time_string();
 		extdisk_generate_unique_filename("VIDEO_0_0_", cur_time_str, ".mp4", life_recording_name, 128);
 		free(cur_time_str);
 	} else {
-		snprintf(life_recording_name, sizeof(life_recording_name), "%s", filename);
+		extdisk_generate_unique_filename("", filename, ".mp4", life_recording_name, 128);
 	}
 	// work around, pre-open the mp4 for the file system to count the mp4 file
 	char life_record_name[128] = {0};
