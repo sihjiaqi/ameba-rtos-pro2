@@ -437,8 +437,9 @@ void nand_pfw_init(void)
 
 	g_partition.part_rec = (nand_part_rec_t *)tmp;
 
-	nand_pfw_scan_badblock(MAX_BLK_IN_FW_AREA);
 	g_pfw_inited = 1;
+	nand_pfw_scan_badblock(MAX_BLK_IN_FW_AREA);
+
 	return;
 pfw_init_fail:
 	if (tmp) {

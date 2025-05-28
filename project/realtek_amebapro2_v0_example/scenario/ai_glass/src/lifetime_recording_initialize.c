@@ -643,6 +643,7 @@ int lifetime_recording_initialize(uint8_t record_filename_length, const char *fi
 	} else {
 		extdisk_generate_unique_filename("", filename, ".mp4", life_recording_name, 128);
 	}
+
 	// work around, pre-open the mp4 for the file system to count the mp4 file
 	char life_record_name[128] = {0};
 	snprintf(life_record_name, sizeof(life_record_name), "%s.mp4", life_recording_name);

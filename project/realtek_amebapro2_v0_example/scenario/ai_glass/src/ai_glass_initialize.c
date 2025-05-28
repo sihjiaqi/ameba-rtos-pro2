@@ -444,16 +444,16 @@ static void ai_glass_snapshot(uartcmdpacket_t *param)
 						extdisk_generate_unique_filename("PICTURE_0_0_", cur_time_str, ".jpg", (char *)temp_record_filename_buffer, 160);
 						snprintf((char *)lifetime_snap_name, sizeof(lifetime_snap_name), "%s%s", (const char *)temp_record_filename_buffer, ".jpg");
 						free(cur_time_str);
-						} else {
+					} else {
 						AI_GLASS_WARN("no memory for lifetime snapshot file name\r\n");
 						extdisk_generate_unique_filename("PICTURE_0_0_", "19800101", ".jpg", (char *)temp_record_filename_buffer, 160);
-						}
 					}
-						if (lifetime_snapshot_take((const char *)lifetime_snap_name) == 0) {
-							status = AI_GLASS_CMD_COMPLETE;
-						} else {
-							status = AI_GLASS_PROC_FAIL;
-						}
+				}
+				if (lifetime_snapshot_take((const char *)lifetime_snap_name) == 0) {
+					status = AI_GLASS_CMD_COMPLETE;
+				} else {
+					status = AI_GLASS_PROC_FAIL;
+				}
 
 				AI_GLASS_MSG("wait for lifetime snapshot deinit\r\n");
 				while (lifetime_snapshot_deinitialize()) {
