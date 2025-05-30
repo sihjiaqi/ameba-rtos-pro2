@@ -1,13 +1,7 @@
 name: Update Submodule
 
 on:
-  # schedule:
-    # - cron: '0 0 * * 0'  # Runs weekily at midnight UTC / Minute/Hour/Day of Month/Month/Day of Week
-  
-  workflow_dispatch: # Allows manual trigger
-
-  repository_dispatch: # Allows one repo to trigger a workflow in another repo
-    types: [submodule-updated]
+  workflow_dispatch:  # This allows manual & external trigger
 
 jobs:
   update-submodule:
@@ -15,20 +9,14 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
-          persist-credentials: false
 
-      # Fetches latest commit from the submodule's remote main branch and 
-      # merges it into the submodule directory in the main repo
       - name: Update Submodule
         run: |
-          cd project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics
-          git checkout main
-          git pull origin main
-          cd -
+          git submodule update --remote --merge project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics
 
       - name: Commit and Push Changes
         env:
@@ -37,6 +25,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@github.com"
           git remote set-url origin https://${GH_PAT}@github.com/sihjiaqi/ameba-rtos-pro2.git
+
           git checkout dev-submodule-workflow
 
           git add project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics
