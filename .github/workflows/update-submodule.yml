@@ -19,12 +19,16 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
+          persist-credentials: false
 
       # Fetches latest commit from the submodule's remote main branch and 
       # merges it into the submodule directory in the main repo
       - name: Update Submodule
         run: |
-            git submodule update --remote --merge project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics
+          cd project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics
+          git checkout main
+          git pull origin main
+          cd -
 
       - name: Commit and Push Changes
         env:
