@@ -1,0 +1,25 @@
+name: Update Submodule
+on:
+  workflow_dispatch:  # This allows manual & external trigger
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          submodules: 'recursive'
+      - name: Update Submodule
+        run: |
+          git submodule update --remote --merge project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics
+      - name: Commit and Push Changes
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@github.com"
+          git remote set-url origin https://${GH_PAT}@github.com/Ameba-AIoT/ameba-rtos-pro2.git
+          git add project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics
+          git commit -m "Auto-update submodule: common_basics [$(date)]" || echo "No changes to commit"
+          git push
