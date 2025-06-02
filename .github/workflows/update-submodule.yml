@@ -8,8 +8,8 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_PAT }}
-          submodules: 'recursive'
+          fetch-depth: 0
+          submodules: recursive
       - name: Update Submodule
         run: |
           git submodule update --remote --merge project/realtek_amebapro2_v0_example/scenario/ai_glass/src/common_basics
