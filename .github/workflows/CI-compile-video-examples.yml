@@ -1,0 +1,49 @@
+name: Build Video/NN Examples
+
+on:
+  push:
+    paths:
+      - '**.c'
+      - '**.h'
+      - '**CMakeLists.txt'
+      - '.github/workflows/CI-compile-examples.yml'
+  workflow_dispatch:
+    
+jobs:
+  build-all-examples:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract toolchain
+        run: |
+          mkdir -p $HOME/toolchain
+          curl -L https://github.com/Ameba-AIoT/ameba-toolchain/releases/download/V10.3.0-amebe-rtos-pro2/asdk-10.3.0-linux-newlib-build-3638-x86_64.tar.bz2 \
+            -o $HOME/toolchain/toolchain.tar.bz2
+          tar -jxvf $HOME/toolchain/toolchain.tar.bz2 -C $HOME/toolchain
+          
+          # Add toolchain binaries to PATH for following steps
+          echo "$HOME/toolchain/asdk-10.3.0/linux/newlib/bin" >> $GITHUB_PATH
+
+      - name: Install build tools on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake git python3 gcc-arm-none-eabi
+        
+      - name: Run build script on Linux
+        if: runner.os != 'Windows'
+        run: python3 .github/scripts/python/compile_examples.py
+      
+      - name: Build complete
+        run: echo "Build finished. .bin files are in bin_outputs/"
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-example-binaries
+          path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
