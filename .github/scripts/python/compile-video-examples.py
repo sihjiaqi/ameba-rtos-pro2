@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import subprocess
 import shutil
 
@@ -29,7 +30,7 @@ EXAMPLES = [
     "mmf2_video_example_fd_lm_mfn_sim_rtsp_init",
     "mmf2_video_example_joint_test_all_nn_rtsp_init",
     "mmf2_video_example_demuxer_rtsp_init",
-    "mmf2_video_example_h264_pcmu_array_mp4_init"
+    "mmf2_video_example_h264_pcmu_array_mp4_init",
     "mmf2_video_example_audio_vipnn_init",
     "mmf2_video_example_md_rtsp_init",
     "mmf2_video_example_md_mp4_init",
@@ -86,10 +87,11 @@ def prepare_source_file(source_path, examples, target_example):
 def build_example(example):
     print(f"Building {example}...")
     prepare_source_file(SOURCE_FILE, EXAMPLES, example)
-    build_dir = os.path.join(PROJECT_DIR, "GCC-RELEASE", "build")
+
+    build_dir = os.path.join(PROJECT_DIR, "GCC-RELEASE", f"build_{example}")
     os.makedirs(build_dir, exist_ok=True)
     os.chdir(build_dir)
-    
+
     # Fix permissions for all .linux files
     mp_dir = os.path.join(PROJECT_DIR, "GCC-RELEASE", "mp")
     try:
@@ -97,22 +99,19 @@ def build_example(example):
         print("Fixed permissions for all .linux files")
     except subprocess.CalledProcessError:
         print("Warning: Could not fix permissions for some build tools")
-    
+
     # Run cmake config
     run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE} -DVIDEO_EXAMPLE=on')
-    
+
     # Build target
     if "nn" in example.lower():
         run('cmake --build . --target flash_nn -j4')
     else:
         run('cmake --build . --target flash -j4')
-    
+
     # Get generated binary file name
-    if "nn" in example.lower():
-        built_bin_name = "flash_ntz.nn.bin"
-    else:
-        built_bin_name = "flash_ntz.bin"
-    built_bin_path = os.path.join(BUILD_DIR, built_bin_name)
+    built_bin_name = "flash_ntz.nn.bin" if "nn" in example.lower() else "flash_ntz.bin"
+    built_bin_path = os.path.join(build_dir, built_bin_name)
     output_bin_path = os.path.join(BIN_OUTPUT_DIR, f"{example}.bin")
     os.makedirs(BIN_OUTPUT_DIR, exist_ok=True)
     shutil.copyfile(built_bin_path, output_bin_path)
@@ -122,7 +121,13 @@ def build_example(example):
     os.chdir("..")
 
 def main():
-    for example in EXAMPLES:
+    # Get the list of examples passed
+    examples_to_build = sys.argv[1:]
+    if not examples_to_build:
+        examples_to_build = EXAMPLES
+
+    # Build all the examples sequentially within the same batch
+    for example in examples_to_build:
         build_example(example)
 
 if __name__ == "__main__":
