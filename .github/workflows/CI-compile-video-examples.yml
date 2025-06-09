@@ -65,7 +65,7 @@ jobs:
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
 
-      # Upload binaries to GitHub artifacts
+      # Upload binaries to GitHub Artifacts
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
