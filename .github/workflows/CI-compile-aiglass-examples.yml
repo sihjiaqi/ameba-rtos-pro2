@@ -2,6 +2,8 @@ name: Build AI Glass Examples
 
 on:
   push:
+    branches:
+      - dev-ai-glass
     paths:
       - '.github/workflows/CI-compile-aiglass-examples.yml'
       - '.github/scripts/python/compile-aiglass-examples.py'
