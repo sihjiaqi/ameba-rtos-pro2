@@ -262,14 +262,6 @@ def build():
     os.makedirs(BUILD_DIR, exist_ok=True)
     os.chdir(BUILD_DIR)
 
-    # Fix permissions for all .linux files
-    mp_dir = os.path.join(PROJECT_DIR, "GCC-RELEASE", "mp")
-    try:
-        run(f'find {mp_dir} -name "*.linux" -exec chmod +x {{}} \\;')
-        print("Fixed permissions for all .linux files")
-    except subprocess.CalledProcessError:
-        print("Warning: Could not fix permissions for some build tools")
-
     # Run cmake config with ai_glass scenario
     run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE} -DSCENARIO=ai_glass')
 

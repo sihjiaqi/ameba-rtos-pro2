@@ -49,6 +49,17 @@ jobs:
       - name: Build complete
         run: echo "Build finished."
       
+      - name: Upload modified source files
+        uses: actions/upload-artifact@v4
+        with:
+          name: modified-sources
+          path: |
+            component/file_system/fatfs/fatfs_sdcard_api.c
+            component/media/mmfv2/module_mp4.c
+            component/soc/8735b/misc/platform/user_boot.c
+            component/video/driver/RTL8735B/video_user_boot.c
+            project/realtek_amebapro2_v0_example/inc/sensor.h
+
       # Upload binary file to GitHub Artifacts
       - name: Upload binary file
         uses: actions/upload-artifact@v4
