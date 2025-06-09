@@ -280,5 +280,26 @@ def build():
     run('make clean')
 
 if __name__ == "__main__":
-    setup()
-    build()
+    try:
+        print("Starting setup...")
+        setup()
+        print("Setup completed.")
+
+        print("Starting build...")
+        build()
+        print("Build completed successfully.")
+
+    except FileNotFoundError as e:
+        print(f"File error: {e.filename} not found.")
+        exit(1)
+
+    except subprocess.CalledProcessError as e:
+        print(f"Subprocess failed with return code {e.returncode}")
+        print(f"Command: {e.cmd}")
+        print(f"Output:\n{e.output}")
+        print(f"Error Output:\n{e.stderr}")
+        exit(e.returncode)
+
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        exit(1)
