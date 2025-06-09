@@ -92,6 +92,9 @@ def build_example(example):
     os.makedirs(build_dir, exist_ok=True)
     os.chdir(build_dir)
 
+    # Run cmake config
+    run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE} -DVIDEO_EXAMPLE=on')
+
     # Fix permissions for all .linux files
     mp_dir = os.path.join(PROJECT_DIR, "GCC-RELEASE", "mp")
     try:
@@ -99,9 +102,6 @@ def build_example(example):
         print("Fixed permissions for all .linux files")
     except subprocess.CalledProcessError:
         print("Warning: Could not fix permissions for some build tools")
-
-    # Run cmake config
-    run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE} -DVIDEO_EXAMPLE=on')
 
     # Build target
     if "nn" in example.lower():
