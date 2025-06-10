@@ -1,6 +1,6 @@
 # This workflow is to build video/NN examples and upload the binary files as artifacts.
-# # It is triggered on push or pull request events for specific paths related to video/NN examples.
-## It also allows manual triggering via workflow_dispatch.
+# It is triggered on push or pull request events for specific paths related to video/NN examples.
+# It also allows manual triggering via workflow_dispatch.
 
 name: Build Video/NN Examples
 

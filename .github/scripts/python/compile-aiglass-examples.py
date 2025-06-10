@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import subprocess
 
 PROJECT_DIR = "project/realtek_amebapro2_v0_example"
@@ -61,7 +62,7 @@ def modify_fatfs_sdcard_api_c(file_path):
 
 # Step 2: Modify module_mp4.c
 def modify_module_mp4_c(file_path):
-    read_file(file_path)
+    content = read_file(file_path)
 
     # 1. Update define macros
     content = re.sub(r'^\s*#define\s+FATFS_SD_CARD', r'//#define FATFS_SD_CARD', content, flags=re.MULTILINE)
@@ -86,14 +87,14 @@ def modify_module_mp4_c(file_path):
 
 # Step 3: Modify user_boot.c to disable bl_log_cust_ctrl
 def modify_user_boot_c(file_path):
-    read_file(file_path)
+    content = read_file(file_path)
     content = re.sub(r'\bbl_log_cust_ctrl\s*=\s*ENABLE\b', 'bl_log_cust_ctrl = DISABLE', content)
     write_file(file_path, content)
     print(f"Successfully updated {file_path}")
 
 # Step 4: Modify video_user_boot.c
 def modify_video_user_boot_c(file_path):
-    read_file(file_path)
+    content = read_file(file_path)
 
     # 1. Uncomment ISP_CONTROL_TEST
     content = re.sub(r'//\s*(#define ISP_CONTROL_TEST)', r'\1', content)
@@ -246,12 +247,10 @@ def setup():
 
 def run(cmd):
     print(f"Running: {cmd}")
-    result = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+    result = subprocess.run(cmd, shell=True, text=True, capture_output=True, check=True)
     print(result.stdout)
-    if result.returncode != 0:
-        print("ERROR:")
-        print(result.stderr)
-        raise subprocess.CalledProcessError(result.returncode, cmd)
+    if result.stderr:
+        print(result.stderr, file=sys.stderr)
 
 def build():
     os.makedirs(BUILD_DIR, exist_ok=True)
@@ -266,7 +265,7 @@ def build():
     # Clean after build
     run('make clean')
 
-if __name__ == "__main__":
+def main():
     try:
         print("Starting setup...")
         setup()
@@ -290,3 +289,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         exit(1)
+        
+if __name__ == "__main__":
+    main()

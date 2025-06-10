@@ -47,22 +47,20 @@ EXAMPLES = [
     "mmf2_video_example_timelapse_mp4_init"
 ]
 
-PROJECT_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", "..", "..", "project", "realtek_amebapro2_v0_example"))
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", "..", "..", "..", "project", "realtek_amebapro2_v0_example"))
 SRC_DIR = os.path.join(PROJECT_DIR, "src", "mmfv2_video_example")
 GCC_RELEASE_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE")
 BUILD_DIR = os.path.join(GCC_RELEASE_DIR, "build")
 BIN_OUTPUT_DIR = os.path.join(PROJECT_DIR, "bin_outputs")
 TOOLCHAIN_FILE = os.path.join(GCC_RELEASE_DIR, "toolchain.cmake")
-SRC_FILE = os.path.join(PROJECT_DIR, SRC_DIR, "video_example_media_framework.c")
+SRC_FILE = os.path.join(SRC_DIR, "video_example_media_framework.c")
 
 def run(cmd):
     print(f"Running: {cmd}")
-    result = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+    result = subprocess.run(cmd, shell=True, text=True, capture_output=True, check=True)
     print(result.stdout)
-    if result.returncode != 0:
-        print("ERROR:")
-        print(result.stderr)
-        raise subprocess.CalledProcessError(result.returncode, cmd)
+    if result.stderr:
+        print(result.stderr, file=sys.stderr)
 
 def prepare_source_file(source_path, examples, target_example):
     with open(source_path, 'r') as file:
@@ -107,7 +105,7 @@ def build_example(example):
     else:
         run('cmake --build . --target flash -j4')
     
-    # Get generated binary file name
+    # Copy built binary file to output directory
     built_bin_name = "flash_ntz.nn.bin" if "nn" in example.lower() else "flash_ntz.bin"
     built_bin_path = os.path.join(build_dir, built_bin_name)
     output_bin_path = os.path.join(BIN_OUTPUT_DIR, f"{example}.bin")
