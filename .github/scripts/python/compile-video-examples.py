@@ -47,12 +47,13 @@ EXAMPLES = [
     "mmf2_video_example_timelapse_mp4_init"
 ]
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "..", "..", "project", "realtek_amebapro2_v0_example"))
-BUILD_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE", "build")
-SOURCE_FILE = os.path.join(PROJECT_DIR, "src", "mmfv2_video_example", "video_example_media_framework.c")
-TOOLCHAIN_FILE = os.path.join(PROJECT_DIR, "GCC-RELEASE", "toolchain.cmake")
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", "..", "..", "project", "realtek_amebapro2_v0_example"))
+SRC_DIR = os.path.join(PROJECT_DIR, "src", "mmfv2_video_example")
+GCC_RELEASE_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE")
+BUILD_DIR = os.path.join(GCC_RELEASE_DIR, "build")
 BIN_OUTPUT_DIR = os.path.join(PROJECT_DIR, "bin_outputs")
+TOOLCHAIN_FILE = os.path.join(GCC_RELEASE_DIR, "toolchain.cmake")
+SRC_FILE = os.path.join(PROJECT_DIR, SRC_DIR, "video_example_media_framework.c")
 
 def run(cmd):
     print(f"Running: {cmd}")
@@ -66,6 +67,7 @@ def run(cmd):
 def prepare_source_file(source_path, examples, target_example):
     with open(source_path, 'r') as file:
         content = file.read()
+
     # Comment out all example functions if not already commented
     for example in examples:
         content = re.sub(
@@ -83,22 +85,18 @@ def prepare_source_file(source_path, examples, target_example):
     )
     with open(source_path, 'w') as file:
         file.write(content)
-
+        
 def build_example(example):
     print(f"Building {example}...")
-    prepare_source_file(SOURCE_FILE, EXAMPLES, example)
+    prepare_source_file(SRC_FILE, EXAMPLES, example)
 
-    build_dir = os.path.join(PROJECT_DIR, "GCC-RELEASE", f"build_{example}")
+    build_dir = os.path.join(GCC_RELEASE_DIR, f"build_{example}")
     os.makedirs(build_dir, exist_ok=True)
     os.chdir(build_dir)
 
     # Fix permissions for all .linux files
-    mp_dir = os.path.join(PROJECT_DIR, "GCC-RELEASE", "mp")
-    try:
-        run(f'find {mp_dir} -name "*.linux" -exec chmod +x {{}} \\;')
-        print("Fixed permissions for all .linux files")
-    except subprocess.CalledProcessError:
-        print("Warning: Could not fix permissions for some build tools")
+    mp_dir = os.path.join(GCC_RELEASE_DIR, "mp")
+    run(f'find {mp_dir} -name "*.linux" -exec chmod +x {{}} \\;')
 
     # Run cmake config
     run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE} -DVIDEO_EXAMPLE=on')
@@ -108,27 +106,43 @@ def build_example(example):
         run('cmake --build . --target flash_nn -j4')
     else:
         run('cmake --build . --target flash -j4')
-
+    
     # Get generated binary file name
     built_bin_name = "flash_ntz.nn.bin" if "nn" in example.lower() else "flash_ntz.bin"
     built_bin_path = os.path.join(build_dir, built_bin_name)
     output_bin_path = os.path.join(BIN_OUTPUT_DIR, f"{example}.bin")
     os.makedirs(BIN_OUTPUT_DIR, exist_ok=True)
     shutil.copyfile(built_bin_path, output_bin_path)
-
+    
     # Clean for next build
     run('make clean')
     os.chdir("..")
 
 def main():
-    # Get the list of examples passed
-    examples_to_build = sys.argv[1:]
-    if not examples_to_build:
-        examples_to_build = EXAMPLES
+    try:
+        # Get the list of examples passed
+        examples_to_build = sys.argv[1:]
+        if not examples_to_build:
+            examples_to_build = EXAMPLES
 
-    # Build all the examples sequentially within the same batch
-    for example in examples_to_build:
-        build_example(example)
+        # Build all the examples sequentially within the same batch
+        for example in examples_to_build:
+            build_example(example)
+
+    except FileNotFoundError as e:
+        print(f"File error: {e.filename} not found.")
+        exit(1)
+
+    except subprocess.CalledProcessError as e:
+        print(f"Subprocess failed with return code {e.returncode}")
+        print(f"Command: {e.cmd}")
+        print(f"Output:\n{e.output}")
+        print(f"Error Output:\n{e.stderr}")
+        exit(e.returncode)
+
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        exit(1)
 
 if __name__ == "__main__":
     main()
