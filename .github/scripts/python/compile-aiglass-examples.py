@@ -1,16 +1,37 @@
-import re
 import os
+import re
 import subprocess
 
 PROJECT_DIR = "project/realtek_amebapro2_v0_example"
 BUILD_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE", "build")
+FATFS_SDCARD_API = "component/file_system/fatfs/fatfs_sdcard_api.c"
+MODULE_MP4 = "component/media/mmfv2/module_mp4.c"
+SENSOR_H = "project/realtek_amebapro2_v0_example/inc/sensor.h"
 TOOLCHAIN_FILE = "../toolchain.cmake"
+USER_BOOT = "component/soc/8735b/misc/platform/user_boot.c"
+VIDEO_BOOT = "component/video/driver/RTL8735B/video_user_boot.c"
 
+# Utility functions for file operations
+def read_file(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+def write_file(path, content):
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def read_lines(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        return f.readlines()
+
+def write_lines(path, lines):
+    with open(path, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+
+# Functions to modify specific files
 # Step 1: Modify fatfs_sdcard_api.c
 def modify_fatfs_sdcard_api_c(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        lines = file.readlines()
-
+    lines = read_lines(file_path)
     brace_count = 0      # To track the number of braces to know when we exit the function
     in_init_func = False # To track if we are inside the fatfs_sd_init function
     is_modified = False  # To check if any changes were made 
@@ -22,29 +43,25 @@ def modify_fatfs_sdcard_api_c(file_path):
             in_init_func = True
             brace_count += line.count('{') - line.count('}')
             continue
-
+        
         if in_init_func:
             brace_count += line.count('{') - line.count('}')
             if 'fatfs_sd_close();' in line.strip():
                 lines[i] = line.replace('fatfs_sd_close();', '// fatfs_sd_close();')
                 is_modified = True
-    
             # If we reach the end of the function, exit the loop
             if brace_count == 0:
                 break
 
     if is_modified:
-        # Write the modified lines back to the file
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.writelines(lines)
+        write_lines(file_path, lines)
         print(f"Successfully updated {file_path}")
     else:
         print("fatfs_sd_close() not found inside fatfs_sd_init()")
 
 # Step 2: Modify module_mp4.c
 def modify_module_mp4_c(file_path):
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+    read_file(file_path)
 
     # 1. Update define macros
     content = re.sub(r'^\s*#define\s+FATFS_SD_CARD', r'//#define FATFS_SD_CARD', content, flags=re.MULTILINE)
@@ -64,36 +81,23 @@ def modify_module_mp4_c(file_path):
         lambda m: '\n'.join('//'+line if line.strip() != '' else line for line in m.group().splitlines()),
         content, flags=re.MULTILINE
     )
-
-    # Write the modified content back to the file
-    with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(content)
-
+    write_file(file_path, content)
     print(f"Successfully updated {file_path}")
-
 
 # Step 3: Modify user_boot.c to disable bl_log_cust_ctrl
 def modify_user_boot_c(file_path):
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
+    read_file(file_path)
     content = re.sub(r'\bbl_log_cust_ctrl\s*=\s*ENABLE\b', 'bl_log_cust_ctrl = DISABLE', content)
-    
-    # Write modified content back to the file
-    with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(content)
-
+    write_file(file_path, content)
     print(f"Successfully updated {file_path}")
 
 # Step 4: Modify video_user_boot.c
 def modify_video_user_boot_c(file_path):
-    # Read the content
-    with open(file_path, "r", encoding="utf-8") as f:
-        content = f.read()
+    read_file(file_path)
 
     # 1. Uncomment ISP_CONTROL_TEST
     content = re.sub(r'//\s*(#define ISP_CONTROL_TEST)', r'\1', content)
-
+    
     # 2. Modify STREAM_V1
     content = re.sub(
         r'(?<=video_params\[STREAM_V1\] = \{)(.*?)(?=\},)', 
@@ -175,22 +179,15 @@ def modify_video_user_boot_c(file_path):
     """
     content = re.sub(old_isp_block, new_isp_block, content, flags=re.DOTALL)
 
-    # Write modified content back to the file
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(content)
-
+    write_file(file_path, content)
     print(f"Successfully updated {file_path}")
 
 # Step 5: Modify sensor.h for SENSOR_SC5356
 def modify_sensor_h(file_path):
-    with open(file_path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-
+    lines = read_lines(file_path)
     new_lines = []
     in_sen_id = False
     in_manual_iq = False
-
-    # Flags to ensure each update happens only once
     sensor_params_modified = False
     sen_id_modified = False
     use_sensor_modified = False
@@ -237,17 +234,15 @@ def modify_sensor_h(file_path):
 
         new_lines.append(line)
 
-    with open(file_path, 'w', encoding='utf-8') as f:
-        f.writelines(new_lines)
-
+    write_lines(file_path, new_lines)
     print(f"Successfully updated {file_path}")
 
 def setup():
-    modify_fatfs_sdcard_api_c("component/file_system/fatfs/fatfs_sdcard_api.c")
-    modify_module_mp4_c("component/media/mmfv2/module_mp4.c")
-    modify_user_boot_c("component/soc/8735b/misc/platform/user_boot.c")
-    modify_video_user_boot_c("component/video/driver/RTL8735B/video_user_boot.c")
-    modify_sensor_h("project/realtek_amebapro2_v0_example/inc/sensor.h")
+    modify_fatfs_sdcard_api_c(FATFS_SDCARD_API)
+    modify_module_mp4_c(MODULE_MP4)
+    modify_user_boot_c(USER_BOOT)
+    modify_video_user_boot_c(VIDEO_BOOT)
+    modify_sensor_h(SENSOR_H)
 
 def run(cmd):
     print(f"Running: {cmd}")

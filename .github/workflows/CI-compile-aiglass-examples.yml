@@ -1,9 +1,11 @@
+# This workflow is to build AI Glass examples and upload the binary file as an artifact.
+# It is triggered on push or pull request events that modify the specified files or directories.
+# It also allows manual triggering via workflow_dispatch.
+
 name: Build AI Glass Examples
 
 on:
   push:
-    branches:
-      - dev-ai-glass
     paths:
       - '.github/workflows/CI-compile-aiglass-examples.yml'
       - '.github/scripts/python/compile-aiglass-examples.py'
@@ -49,16 +51,16 @@ jobs:
       - name: Build complete
         run: echo "Build finished."
       
-      - name: Upload modified source files
-        uses: actions/upload-artifact@v4
-        with:
-          name: modified-sources
-          path: |
-            component/file_system/fatfs/fatfs_sdcard_api.c
-            component/media/mmfv2/module_mp4.c
-            component/soc/8735b/misc/platform/user_boot.c
-            component/video/driver/RTL8735B/video_user_boot.c
-            project/realtek_amebapro2_v0_example/inc/sensor.h
+      # - name: Upload modified source files
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: modified-sources
+      #     path: |
+      #       component/file_system/fatfs/fatfs_sdcard_api.c
+      #       component/media/mmfv2/module_mp4.c
+      #       component/soc/8735b/misc/platform/user_boot.c
+      #       component/video/driver/RTL8735B/video_user_boot.c
+      #       project/realtek_amebapro2_v0_example/inc/sensor.h
 
       # Upload binary file to GitHub Artifacts
       - name: Upload binary file
