@@ -6,6 +6,8 @@ name: Build Video/NN Examples
 
 on:
   push:
+    branches:
+      - dev-video-examples
     paths:
       - '.github/workflows/CI-compile-video-examples.yml'
       - '.github/scripts/python/compile-video-examples.py'
@@ -55,16 +57,27 @@ jobs:
       - name: Install build tools on Linux
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential cmake git python3 gcc-arm-none-eabi
-        
+
       - name: Run build script on Linux
         if: runner.os != 'Windows'
+        shell: bash
         run: |
+          set -e
           examples=(${{ matrix.batch.examples }})
+          pids=()
           for example in "${examples[@]}"; do
             echo "Launching build for $example"
             python3 .github/scripts/python/compile-video-examples.py "$example" &
+            pids+=($!)
           done
-          wait
+
+          # Wait for all and collect exit codes
+          for pid in "${pids[@]}"; do
+            wait $pid || {
+            echo "Build failed for: ${examples[$i]}"
+            exit 1
+          }
+          done
 
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."

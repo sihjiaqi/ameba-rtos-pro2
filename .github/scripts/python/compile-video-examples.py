@@ -96,8 +96,8 @@ def build_example(example):
     run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE} -DVIDEO_EXAMPLE=on')
 
     # Fix permissions for all .linux files
-    mp_dir = os.path.join(GCC_RELEASE_DIR, "mp")
-    run(f'find {mp_dir} -name "*.linux" -exec chmod +x {{}} \\;')
+    # mp_dir = os.path.join(GCC_RELEASE_DIR, "mp")
+    # run(f'find {mp_dir} -name "*.linux" -exec chmod +x {{}} \\;')
 
     # Build target
     if "nn" in example.lower():
