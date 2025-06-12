@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         # os: [ubuntu-latest, windows-latest, macos-latest]
 
         # Define examples in batches to run them in parallel
@@ -44,37 +44,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download and extract toolchain (Linux)
+      - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
-        run: |
-          mkdir -p $HOME/toolchain
-          curl -L https://github.com/Ameba-AIoT/ameba-toolchain/releases/download/V10.3.0-amebe-rtos-pro2/asdk-10.3.0-linux-newlib-build-3638-x86_64.tar.bz2 \
-          -o $HOME/toolchain/toolchain.tar.bz2
-          tar -jxvf $HOME/toolchain/toolchain.tar.bz2 -C $HOME/toolchain
-        
-          # Add toolchain binaries to PATH for following steps
-          echo "$HOME/toolchain/asdk-10.3.0/linux/newlib/bin" >> $GITHUB_PATH
-        
-      - name: Download and extract toolchain (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          mkdir -p $HOME/toolchain
-          curl -L https://github.com/Ameba-AIoT/ameba-toolchain/releases/download/V10.3.0-amebe-rtos-pro2/asdk-10.3.0-darwin-newlib-build-3659-x86_64.tar.bz2 \
-          -o $HOME/toolchain/toolchain.tar.bz2
-          tar -jxvf $HOME/toolchain/toolchain.tar.bz2 -C $HOME/toolchain
+        run: python3 .github/scripts/python/bootstrap-linux-env.py
 
-          # Add toolchain binaries to PATH for following steps
-          echo "$HOME/toolchain/asdk-10.3.0/darwin/newlib/bin" >> $GITHUB_PATH
-                    
-      - name: Install build tools on Linux
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake git python3 gcc-arm-none-eabi
-        
-      - name: Install build tools on macOS
+      - name: Bootstrap MacOS Environment
         if: runner.os == 'macOS'
-        run: |
-            brew update
-            brew install cmake git python3 arm-none-eabi-gcc
+        run: python3 .github/scripts/python/bootstrap-macos-env.py
+
+      - name: Bootstrap Windows Environment
+        if: runner.os == 'Windows'
+        run: python3 .github/scripts/python/bootstrap-windows-env.py
 
       - name: Grant execute permission to all mp tools executable (Linux)
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
