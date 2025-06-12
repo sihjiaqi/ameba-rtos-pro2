@@ -17,9 +17,9 @@ def download_and_extract_toolchain():
     run(["curl", "-L", TOOLCHAIN_URL, "-o", str(TOOLCHAIN_ARCHIVE)])
     run(["tar", "-jxvf", str(TOOLCHAIN_ARCHIVE), "-C", str(TOOLCHAIN_DIR)])
 
-def install_build_tools():
-    run(["brew", "update"])
-    run(["brew", "install", "cmake", "git", "python3", "arm-none-eabi-gcc"])
+# def install_build_tools():
+#     run(["brew", "update"])
+#     run(["brew", "install", "cmake", "git", "python3", "arm-none-eabi-gcc"])
 
 def append_to_github_path():
     github_path = os.getenv("GITHUB_PATH")
