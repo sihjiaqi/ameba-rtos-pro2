@@ -26,7 +26,14 @@ def append_to_github_path():
     with open(github_path, "a") as f:
         f.write(f"{TOOLCHAIN_BIN_PATH}\n")
 
+def main():
+    try:
+        download_and_extract_toolchain()
+        install_build_tools()
+        append_to_github_path()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        exit(1)
+    
 if __name__ == "__main__":
-    download_and_extract_toolchain()
-    install_build_tools()
-    append_to_github_path()
+    main()
