@@ -48,7 +48,7 @@ def install_cmake():
     print("Installing CMake...")
     download_file(CMAKE_URL, CMAKE_INSTALLER)
     # Install cmake silently and without restarting the system after installation
-    run(["msiexec", "/i", CMAKE_INSTALLER, "/quiet", "/norestart"], shell=True)
+    run(["msiexec", "/i", str(CMAKE_INSTALLER), "/quiet", "/norestart"], shell=True)
 
 # Add CMake and toolchain to environment variables
 def add_env_to_bashrc():
