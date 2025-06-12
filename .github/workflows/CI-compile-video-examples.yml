@@ -46,15 +46,15 @@ jobs:
 
       - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
-        run: python3 scripts/python/bootstrap-linux-env.py
+        run: python3 .github/scripts/python/bootstrap-linux-env.py
 
       - name: Bootstrap MacOS Environment
         if: runner.os == 'macOS'
-        run: python3 scripts/python/bootstrap-macos-env.py
+        run: python3 .github/scripts/python/bootstrap-macos-env.py
 
       - name: Bootstrap Windows Environment
         if: runner.os == 'Windows'
-        run: python3 scripts/python/bootstrap-windows-env.py
+        run: python3 .github/scripts/python/bootstrap-windows-env.py
 
       - name: Grant execute permission to all mp tools executable (Linux)
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
