@@ -80,7 +80,7 @@ def main():
         launch_msys_shell() 
         install_cmake()
         add_env_to_bashrc() 
-        launch_msys_shell
+        launch_msys_shell()
 
     except Exception as e:
         print(f"An error occurred: {e}")
