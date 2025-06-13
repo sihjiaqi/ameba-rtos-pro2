@@ -14,6 +14,7 @@ CMAKE_PATH = Path("C:/Program Files/CMake/bin")
 MSYS_7Z = Path.home() / "msys64_v10_3.7z"
 MSYS_ROOT = Path.home() / "msys64_v10_3/msys64"
 MSYS_HOME = MSYS_ROOT / "home" / os.getenv("USERNAME")
+MSYS_CMD = MSYS_ROOT / "msys2_shell.cmd"
 BASHRC_PATH = MSYS_HOME / ".bashrc"
 POST_FILE = MSYS_ROOT / "etc/post-install/05-home-dir.post"
 
@@ -44,29 +45,38 @@ def set_home_directory():
     with open(POST_FILE, "a") as f:
         f.write("\n".join(shell_lines))
 
+def launch_msys_shell():
+    print("Launching MSYS shell...")
+    cmd = [
+        "cmd.exe", "/C",
+        f"{MSYS_CMD}",
+        "-defterm", "-mingw32", "-no-start",
+        "-shell", "bash", "-c", "exit"
+    ]
+    run(cmd, shell=True)
+
 def install_cmake():
     print("Installing CMake...")
     download_file(CMAKE_URL, CMAKE_INSTALLER)
     # Install cmake silently and without restarting the system after installation
     run(["msiexec", "/i", str(CMAKE_INSTALLER), "/quiet", "/norestart"], shell=True)
 
-# Add CMake and toolchain to environment variables
-def add_env_to_bashrc():
-    new_lines = []
-    if CMAKE_PATH.exists():
-        new_lines.append(f'export PATH=/{CMAKE_PATH}:$PATH')
-    if TOOLCHAIN_BIN.exists():
-        new_lines.append(f'export PATH=/{TOOLCHAIN_BIN}:$PATH')
-    if new_lines:
-        with open(BASHRC_PATH, "a") as f:
-            f.write("\n".join(new_lines) + "\n")
+def append_to_github_path():
+    github_path = os.environ.get("GITHUB_PATH")
+    if github_path:
+        lines = [str(CMAKE_PATH), str(TOOLCHAIN_BIN)]
+        with open(github_path, "a") as f:
+            for p in lines:
+                f.write(p + "\n")
 
 def main():
     try:
         download_extract_msys()
         set_home_directory()
+        launch_msys_shell() 
         install_cmake()
-        add_env_to_bashrc() 
+        append_to_github_path()
+
     except Exception as e:
         print(f"An error occurred: {e}")
         exit(1)
