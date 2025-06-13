@@ -55,6 +55,9 @@ jobs:
       - name: Bootstrap Windows Environment
         if: runner.os == 'Windows'
         run: python3 .github/scripts/python/bootstrap-windows-env.py
+        
+      - name: Confirm compiler is in PATH
+        run: where arm-none-eabi-gcc
 
       - name: Grant execute permission to all mp tools executable (Linux)
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
@@ -79,7 +82,7 @@ jobs:
           $examples = "${{ matrix.batch.examples }}".Split(" ")
           foreach ($example in $examples) {
               Write-Host "Launching build for $example"
-              Start-Process -NoNewWindow -FilePath "python" -ArgumentList ".github/scripts/python/compile-video-examples.py", $example
+              & python .github/scripts/python/compile-video-examples.py $example
           }
 
       - name: Build complete
