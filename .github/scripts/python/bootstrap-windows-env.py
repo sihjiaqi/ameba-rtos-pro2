@@ -72,6 +72,20 @@ def add_env_to_bashrc():
         with open(BASHRC_PATH, "a") as f:
             f.write("\n".join(new_lines) + "\n")
 
+def install_build_tools():
+    print("Installing build tools...")
+    packages = [
+        # "Git.Git",            
+        "Kitware.CMake",  
+        "Python.Python.3", 
+        "GNU.ArmSDK" 
+    ]
+    for pkg in packages:
+        subprocess.run(
+            ["winget", "install", "--id", pkg, "-e", "--accept-package-agreements", "--accept-source-agreements"],
+            check=True
+        )
+
 def main():
     try:
         download_extract_msys()
@@ -79,6 +93,7 @@ def main():
         launch_msys_shell() 
         install_cmake()
         add_env_to_bashrc() 
+        install_build_tools()
     except Exception as e:
         print(f"An error occurred: {e}")
         exit(1)
