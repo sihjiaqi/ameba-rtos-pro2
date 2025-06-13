@@ -14,7 +14,7 @@ CMAKE_PATH = Path("C:/Program Files/CMake/bin")
 MSYS_7Z = Path.home() / "msys64_v10_3.7z"
 MSYS_ROOT = Path.home() / "msys64_v10_3/msys64"
 MSYS_HOME = MSYS_ROOT / "home" / os.getenv("USERNAME")
-MSYS_CMD = MSYS_ROOT.parent / "msys2_shell.cmd"
+MSYS_CMD = MSYS_ROOT / "msys2_shell.cmd"
 BASHRC_PATH = MSYS_HOME / ".bashrc"
 POST_FILE = MSYS_ROOT / "etc/post-install/05-home-dir.post"
 
