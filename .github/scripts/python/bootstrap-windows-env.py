@@ -27,10 +27,24 @@ def download_file(url, dest):
     urllib.request.urlretrieve(url, dest)
 
 def download_extract_msys():
-    print("Downloading MSYS...")
+    extract_base = Path.home()
     download_file(MSYS_URL, MSYS_7Z)
-    # Use 7z to extract the msys archive
-    run(["7z", "x", str(MSYS_7Z), f"-o{str(Path.home())}", "-y"])
+
+    run(["7z", "x", str(MSYS_7Z), f"-o{extract_base}", "-y"])
+    
+    extracted_dirs = [d for d in extract_base.iterdir() if d.is_dir() and "msys64_v10_3" in d.name]
+    if extracted_dirs:
+        full_path = extracted_dirs[0].resolve()
+    else:
+        full_path = extract_base
+    
+    print(f"Files extracted to: {full_path}")
+
+# def download_extract_msys():
+#     print("Downloading MSYS...")
+#     download_file(MSYS_URL, MSYS_7Z)
+#     # Use 7z to extract the msys archive
+#     run(["7z", "x", str(MSYS_7Z), f"-o{str(Path.home())}", "-y"])
 
 # Set the home directory for MSYS
 def set_home_directory():
