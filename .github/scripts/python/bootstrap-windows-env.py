@@ -48,10 +48,10 @@ def set_home_directory():
 def launch_msys_shell():
     print("Launching MSYS shell...")
     cmd = [
-        str(MSYS_CMD),
-        "-defterm", "-here", "-no-start",
-        "-shell", "bash",
-        "-c", "exit"
+        "cmd.exe", "/C",
+        f"{MSYS_ROOT.parent / 'msys2_shell.cmd'}",
+        "-defterm", "-mingw32", "-no-start",
+        "-shell", "bash", "-c", "exit"
     ]
     run(cmd, shell=True)
 
