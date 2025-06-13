@@ -79,8 +79,9 @@ def main():
         set_home_directory()
         launch_msys_shell() 
         install_cmake()
-        launch_msys_shell
         add_env_to_bashrc() 
+        launch_msys_shell
+
     except Exception as e:
         print(f"An error occurred: {e}")
         exit(1)
