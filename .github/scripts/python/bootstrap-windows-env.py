@@ -14,6 +14,7 @@ CMAKE_PATH = Path("C:/Program Files/CMake/bin")
 MSYS_7Z = Path.home() / "msys64_v10_3.7z"
 MSYS_ROOT = Path.home() / "msys64_v10_3/msys64"
 MSYS_HOME = MSYS_ROOT / "home" / os.getenv("USERNAME")
+MSYS_CMD = MSYS_ROOT.parent / "msys2_shell.cmd"
 BASHRC_PATH = MSYS_HOME / ".bashrc"
 POST_FILE = MSYS_ROOT / "etc/post-install/05-home-dir.post"
 
@@ -27,24 +28,10 @@ def download_file(url, dest):
     urllib.request.urlretrieve(url, dest)
 
 def download_extract_msys():
-    extract_base = Path.home()
+    print("Downloading MSYS...")
     download_file(MSYS_URL, MSYS_7Z)
-
-    run(["7z", "x", str(MSYS_7Z), f"-o{extract_base}", "-y"])
-    
-    extracted_dirs = [d for d in extract_base.iterdir() if d.is_dir() and "msys64_v10_3" in d.name]
-    if extracted_dirs:
-        full_path = extracted_dirs[0].resolve()
-    else:
-        full_path = extract_base
-    
-    print(f"Files extracted to: {full_path}")
-
-# def download_extract_msys():
-#     print("Downloading MSYS...")
-#     download_file(MSYS_URL, MSYS_7Z)
-#     # Use 7z to extract the msys archive
-#     run(["7z", "x", str(MSYS_7Z), f"-o{str(Path.home())}", "-y"])
+    # Use 7z to extract the msys archive
+    run(["7z", "x", str(MSYS_7Z), f"-o{str(Path.home())}", "-y"])
 
 # Set the home directory for MSYS
 def set_home_directory():
@@ -57,6 +44,16 @@ def set_home_directory():
     ]
     with open(POST_FILE, "a") as f:
         f.write("\n".join(shell_lines))
+
+def launch_msys_shell():
+    print("Launching MSYS shell...")
+    cmd = [
+        str(MSYS_CMD),
+        "-defterm", "-here", "-no-start",
+        "-shell", "bash",
+        "-c", "exit"
+    ]
+    run(cmd, shell=True)
 
 def install_cmake():
     print("Installing CMake...")
@@ -79,6 +76,7 @@ def main():
     try:
         download_extract_msys()
         set_home_directory()
+        launch_msys_shell() 
         install_cmake()
         add_env_to_bashrc() 
     except Exception as e:
