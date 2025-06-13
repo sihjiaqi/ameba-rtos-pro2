@@ -79,7 +79,7 @@ jobs:
           $examples = "${{ matrix.batch.examples }}".Split(" ")
           foreach ($example in $examples) {
               Write-Host "Launching build for $example"
-              Start-Process -NoNewWindow -FilePath "python" -ArgumentList ".github/scripts/python/compile-video-examples.py", $example
+              & python .github/scripts/python/compile-video-examples.py $example
           }
 
       - name: Build complete

@@ -72,11 +72,11 @@ def add_env_to_bashrc():
     if new_lines:
         with open(BASHRC_PATH, "a") as f:
             f.write("\n".join(new_lines) + "\n")
-import os
 
 def append_to_github_path():
+    pth = str(CMAKE_PATH).replace(" ", "\\ ")
     github_path = os.environ.get("GITHUB_PATH")
-    lines = [str(CMAKE_PATH), str(TOOLCHAIN_BIN)]
+    lines = [str(pth), str(TOOLCHAIN_BIN)]
     with open(github_path, "a") as f:
         for p in lines:
             f.write(p + "\n")
