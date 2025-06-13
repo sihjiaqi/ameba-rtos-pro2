@@ -72,6 +72,14 @@ def add_env_to_bashrc():
     if new_lines:
         with open(BASHRC_PATH, "a") as f:
             f.write("\n".join(new_lines) + "\n")
+import os
+
+def append_to_github_path():
+    github_path = os.environ.get("GITHUB_PATH")
+    lines = [str(CMAKE_PATH), str(TOOLCHAIN_BIN)]
+    with open(github_path, "a") as f:
+        for p in lines:
+            f.write(p + "\n")
 
 def main():
     try:
@@ -80,7 +88,7 @@ def main():
         launch_msys_shell() 
         install_cmake()
         add_env_to_bashrc() 
-        launch_msys_shell()
+        append_to_github_path()
 
     except Exception as e:
         print(f"An error occurred: {e}")
