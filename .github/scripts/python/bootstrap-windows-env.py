@@ -65,7 +65,8 @@ def install_cmake():
 def add_env_to_bashrc():
     new_lines = []
     if CMAKE_PATH.exists():
-        new_lines.append(f'export PATH=/{CMAKE_PATH}:$PATH')
+        pth = str(CMAKE_PATH).replace(" ", "\\ ")
+        new_lines.append(f'export PATH=/{pth}:$PATH')
     if TOOLCHAIN_BIN.exists():
         new_lines.append(f'export PATH=/{TOOLCHAIN_BIN}:$PATH')
     if new_lines:
@@ -74,17 +75,11 @@ def add_env_to_bashrc():
 
 def install_build_tools():
     print("Installing build tools...")
-    packages = [
-        # "Git.Git",            
-        "Kitware.CMake",  
-        "Python.Python.3", 
-        "GNU.ArmSDK" 
-    ]
-    for pkg in packages:
-        subprocess.run(
-            ["winget", "install", "--id", pkg, "-e", "--accept-package-agreements", "--accept-source-agreements"],
-            check=True
-        )
+    subprocess.run(
+        ["winget", "install", "--id", "Arm.GnuArmEmbeddedToolchain", "-e", 
+         "--accept-package-agreements", "--accept-source-agreements"],
+        check=True
+    )
 
 def main():
     try:
