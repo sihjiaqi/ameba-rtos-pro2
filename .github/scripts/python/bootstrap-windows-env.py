@@ -49,7 +49,7 @@ def launch_msys_shell():
     print("Launching MSYS shell...")
     cmd = [
         "cmd.exe", "/C",
-        f"{POST_FILE}",
+        f"{MSYS_CMD}",
         "-defterm", "-mingw32", "-no-start",
         "-shell", "bash", "-c", "exit"
     ]
