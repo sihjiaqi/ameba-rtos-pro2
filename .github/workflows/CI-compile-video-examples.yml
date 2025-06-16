@@ -55,17 +55,25 @@ jobs:
       - name: Bootstrap Windows Environment
         if: runner.os == 'Windows'
         run: python3 .github/scripts/python/bootstrap-windows-env.py
-        
+
       - name: Confirm compiler is in PATH
         run: where arm-none-eabi-gcc
 
       - name: Grant execute permission to all mp tools executable (Linux)
+        if: runner.os == 'Linux'
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
       
       - name: Grant execute permission to all mp tools executable (macOS)
         if: runner.os == 'macOS'
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
 
+      - name: Grant execute permission to all mp tools executable (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Get-ChildItem -Path "project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
+            icacls $_.FullName /grant Everyone:F
+          }
+        
       - name: Run build script on Linux or macOS
         if: runner.os != 'Windows'
         run: |
