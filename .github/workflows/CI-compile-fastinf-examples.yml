@@ -1,0 +1,62 @@
+# This workflow is to build fast inference examples and upload the binary files as artifacts.
+# It is triggered on push or pull request events for specific paths related to fast inference examples.
+# It also allows manual triggering via workflow_dispatch.
+
+name: Build Fast Inference Examples
+
+on:
+  push:
+    branches:
+      - 'dev-fast-inf'
+  #   paths:
+  #     - '.github/workflows/CI-compile-fastinf-examples.yml'
+  #     - '.github/scripts/python/compile-fastinf-examples.py'
+  #     - 'project/realtek_amebapro2_v0_example/src/fast_inf_example/**'
+  # pull_request:
+  #   paths:
+  #     - '.github/workflows/CI-compile-fastinf-examples.yml'
+  #     - '.github/scripts/python/compile-fastinf-examples.py'
+  #     - 'project/realtek_amebapro2_v0_example/src/fast_inf_example/**'
+  workflow_dispatch:
+    
+jobs:
+  build-all-examples:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Bootstrap Linux Environment
+        if: runner.os == 'Linux'
+        run: python3 .github/scripts/python/bootstrap-linux-env.py
+
+      - name: Bootstrap MacOS Environment
+        if: runner.os == 'macOS'
+        run: python3 .github/scripts/python/bootstrap-macos-env.py
+
+      - name: Grant execute permission to all mp tools executable (Linux)
+        if: runner.os == 'Linux'
+        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
+      
+      - name: Grant execute permission to all mp tools executable (macOS)
+        if: runner.os == 'macOS'
+        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
+        
+      - name: Run build script on Linux or macOS
+        if: runner.os != 'Windows'
+        run: python3 .github/scripts/python/compile-fastinf-examples.py
+
+      - name: Build complete
+        run: echo "Build finished."
+
+      # Upload binaries to GitHub Artifacts
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: fastinf-example-binary
+          path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
