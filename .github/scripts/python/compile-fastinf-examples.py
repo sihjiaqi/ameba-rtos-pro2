@@ -36,28 +36,8 @@ def enable_fcs_in_sensor_h(path):
     write_file(path, content)
     
 # Step 2: Enable ch0 FCS mode and modify resolution settings
-def update_struct_fields(content, struct_name, updates):
-    pattern = rf"\b{struct_name}\s*=\s*\{{(.*?)\n\}};"
-    match = re.search(pattern, content, re.DOTALL)
-    struct_body = match.group(1)
-
-    for param, new_value in updates.items():
-        params_pattern = rf"({re.escape(param)}\s*=\s*)([^,;]+)"
-        if re.search(params_pattern, struct_body):
-            struct_body = re.sub(params_pattern, rf"\1{new_value}", struct_body)
-        else:
-            print(f"Warning: Parameter '{param}' not found in {struct_name}.")
-
-    # Replace the old struct with the modified one
-    updated_content = content.replace(match.group(1), struct_body)
-    return updated_content
-
-import re
-
 def update_nested_struct_block(content, struct_name, sub_struct_key, updates):
-    """
-    Updates fields inside a nested struct like .video_params[STREAM_V1] = { ... }
-    """
+
     pattern = re.compile(
         rf'({re.escape(struct_name)}\s*=\s*\{{.*?\.{re.escape(sub_struct_key)}\s*=\s*\{{)(.*?)(\}}\s*,)', 
         re.DOTALL
@@ -177,7 +157,7 @@ def enable_nv12_copy(path):
 # Step 6: Enable waiting MD result functioN
 def enable_wait_md_result(path):
     content = read_file(path)
-    content = re.sub(r'//\s*(#define WAIT_MD_RESULT\s+1)', r'\1', content)
+    content = re.sub(r'//\s*#define WAIT_MD_RESULT\s+1', '#define WAIT_MD_RESULT 1', content)
     write_file(path, content)
 
 # Step 7: Apply lightweight NN models
