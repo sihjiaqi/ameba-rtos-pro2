@@ -1,3 +1,4 @@
+import re
 import os
 import sys
 import subprocess
@@ -9,6 +10,164 @@ BUILD_DIR = os.path.join(GCC_RELEASE_DIR, "build")
 BIN_OUTPUT_DIR = os.path.join(PROJECT_DIR, "bin_outputs")
 TOOLCHAIN_FILE = os.path.join(GCC_RELEASE_DIR, "toolchain.cmake")
 SRC_FILE = os.path.join(SRC_DIR, "fast_inf_example.c")
+
+# Utility functions for file operations
+def read_file(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+def write_file(path, content):
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def read_lines(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        return f.readlines()
+
+def write_lines(path, lines):
+    with open(path, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+
+# Functions to modify specific files
+# Step 1: Enable FCS mode
+def enable_fcs_in_sensor_h(path):
+    content = read_file(path)
+    content = re.sub(r'#define\s+ENABLE_FCS\s+\d+', '#define ENABLE_FCS\t1', content)
+    write_file(path, content)
+    
+# Step 2: Enable ch0 FCS mode and modify resolution settings
+def update_struct_fields(content, struct_name, updates):
+    pattern = rf"\b{struct_name}\s*=\s*\{{(.*?)\n\}};"
+    match = re.search(pattern, content, re.DOTALL)
+    struct_body = match.group(1)
+
+    for param, new_value in updates.items():
+        params_pattern = rf"({re.escape(param)}\s*=\s*)([^,;]+)"
+        if re.search(params_pattern, struct_body):
+            struct_body = re.sub(params_pattern, rf"\1{new_value}", struct_body)
+        else:
+            print(f"Warning: Parameter '{param}' not found in {struct_name}.")
+
+    # Replace the old struct with the modified one
+    updated_content = content.replace(match.group(1), struct_body)
+    return updated_content
+
+def update_video_user_boot(path):
+    content = read_file(path)
+
+    updates = {
+        '.video_params[STREAM_V1].width': '1920',
+        '.video_params[STREAM_V1].height': '1080',
+        '.video_params[STREAM_V1].fps': '20',
+        '.video_params[STREAM_V1].fcs': '1',
+
+        '.video_params[STREAM_V3].width': '128',
+        '.video_params[STREAM_V3].height': '128',
+        '.video_params[STREAM_V3].fps': '20',
+        '.video_params[STREAM_V3].fcs': '1',
+
+        '.video_params[STREAM_V4].width': '320',
+        '.video_params[STREAM_V4].height': '320',
+        '.video_params[STREAM_V4].fps': '20',
+        '.video_params[STREAM_V4].fcs': '1',
+        '.video_drop_frame[STREAM_V1]': '3',
+        '.video_drop_frame[STREAM_V4]': '3',
+        '.fcs_channel': '3',
+        '.extra_video_enable': '1'
+    }
+
+    updated = update_struct_fields(content, "video_boot_stream", updates)
+    write_file(path, updated)
+
+# Step 3: Modify video slot settings of ch2 and ch4
+def update_video_boot(path):
+    content = read_file(path)
+    content = re.sub(r'static\s+unsigned\s+char\s+video_boot_slot_num\[[0-9]+\]\s*=\s*\{[^}]+\}',
+                     'static unsigned char video_boot_slot_num[5] = {2, 2, 3, 2, 3};',
+                     content)
+    write_file(path, content)
+    
+# Step 4: Disable wifi connection
+def disable_wifi_connection(file_path):
+    lines = read_lines(file_path)
+    in_setup = False
+    updated_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Detect start of setup function
+        if not in_setup and re.match(r'^void\s+setup\s*\(\s*\)\s*{', stripped):
+            in_setup = True
+            updated_lines.append(line)
+            continue
+        # Exit when hitting closing brace of setup
+        if in_setup and stripped == '}':
+            in_setup = False
+            updated_lines.append(line)
+            continue
+        # Inside setup: comment if, else, endif
+        if in_setup and re.match(r'^\s*#(if|else|endif)', stripped):
+            if not stripped.startswith('//'):
+                updated_lines.append('// ' + line)
+            else:
+                updated_lines.append(line)
+        else:
+            updated_lines.append(line)
+
+    write_lines(file_path, updated_lines)
+
+# Step 5: Enable copying the NV12 image to the MD queue
+def enable_nv12_copy(path):
+    content = read_file(path)
+    updates = {'.use_static_addr' : '0'}
+    updated = update_struct_fields(content, "video_v3_params", updates)
+    write_file(path, updated)
+    
+# Step 6: Enable waiting MD result functioN
+def enable_wait_md_result(path):
+    content = read_file(path)
+    content = re.sub(r'//\s*(#define WAIT_MD_RESULT\s+1)', r'\1', content)
+    write_file(path, content)
+
+# Step 7: Apply lightweight NN models
+# def write_nn_config(path):
+#     config = {
+#         "msg_level": 3,
+#         "PROFILE": ["FWFS"],
+#         "FWFS": {
+#             "files": ["yolo_fastest_320x320"]
+#         },
+#         "yolo_fastest_320x320": {
+#             "name": "yolo_fastest.nb",
+#             "source": "binary",
+#             "file": "yolo_fastest_1.1_320x320_u8.nb"
+#         }
+#     }
+#     with open(path, 'w', encoding='utf-8') as f:
+#         json.dump(config, f, indent=4)
+
+# Step 8: Modify baud rate settings
+def set_uart_baudrate(path):
+    content = read_file(path)
+    content = re.sub(r'baud_rate\s*=\s*\d+;', 'baud_rate = 3000000;', content)
+    write_file(path, content)
+    
+# Step 9: Adjust flash speed settings
+def set_flash_speed(path):
+    content = read_file(path)
+    content = re.sub(r'#define\s+HIGH_SPEED_FLASH\s+\w+', '#define HIGH_SPEED_FLASH FLASH_SPEED_125MHz', content)
+    write_file(path, content)
+  
+def setup():
+    enable_fcs_in_sensor_h("project/realtek_amebapro2_v0_example/inc/sensor.h")
+    update_video_user_boot("component/video/driver/RTL8735B/video_user_boot.c")
+    update_video_boot("component/video/driver/RTL8735B/video_boot.c")
+    disable_wifi_connection("project/realtek_amebapro2_v0_example/src/fast_inf_example/fast_inf_example.c")
+    enable_nv12_copy("project/realtek_amebapro2_v0_example/src/fast_inf_example/fast_inf_example.c")
+    enable_wait_md_result("project/realtek_amebapro2_v0_example/src/fast_inf_example/fast_inf_example.c")
+    set_uart_baudrate("project/realtek_amebapro2_v0_example/src/main.c")
+    set_flash_speed("component/soc/8735b/fwlib/rtl8735b/include/hal_spic.h")
 
 def run(cmd):
     print(f"Running: {cmd}")
@@ -32,7 +191,13 @@ def build():
 
 def main():
     try:
+        print("Starting setup...")
+        setup()
+        print("Setup completed.")
+
+        print("Starting build...")
         build()
+        print("Build completed successfully.")
 
     except FileNotFoundError as e:
         print(f"File error: {e.filename} not found.")

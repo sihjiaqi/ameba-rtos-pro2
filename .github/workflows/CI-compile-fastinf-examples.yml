@@ -54,6 +54,18 @@ jobs:
       - name: Build complete
         run: echo "Build finished."
 
+      - name: Upload modified source files
+        uses: actions/upload-artifact@v4
+        with:
+          name: modified-sources
+          path: |
+            project/realtek_amebapro2_v0_example/inc/sensor.h
+            component/video/driver/RTL8735B/video_user_boot.c
+            component/video/driver/RTL8735B/video_boot.c
+            project/realtek_amebapro2_v0_example/src/fast_inf_example/fast_inf_example.c
+            project/realtek_amebapro2_v0_example/src/main.c
+            component/soc/8735b/fwlib/rtl8735b/include/hal_spic.h
+      
       # Upload binaries to GitHub Artifacts
       - name: Upload binaries
         uses: actions/upload-artifact@v4
