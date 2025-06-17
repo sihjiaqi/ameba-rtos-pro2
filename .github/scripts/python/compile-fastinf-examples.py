@@ -52,32 +52,78 @@ def update_struct_fields(content, struct_name, updates):
     updated_content = content.replace(match.group(1), struct_body)
     return updated_content
 
+import re
+
+def update_nested_struct_block(content, struct_name, sub_struct_key, updates):
+    """
+    Updates fields inside a nested struct like .video_params[STREAM_V1] = { ... }
+    """
+    pattern = re.compile(
+        rf'({re.escape(struct_name)}\s*=\s*\{{.*?\.{re.escape(sub_struct_key)}\s*=\s*\{{)(.*?)(\}}\s*,)', 
+        re.DOTALL
+    )
+
+    def replacer(match):
+        before = match.group(1)
+        block = match.group(2)
+        after = match.group(3)
+
+        for key, val in updates.items():
+            block = re.sub(
+                rf'(\.{re.escape(key)}\s*=\s*)[^,]+',
+                rf'\1{val}',
+                block
+            )
+
+        return before + block + after
+
+    return pattern.sub(replacer, content)
+
+
 def update_video_user_boot(path):
     content = read_file(path)
 
-    updates = {
-        '.video_params[STREAM_V1].width': '1920',
-        '.video_params[STREAM_V1].height': '1080',
-        '.video_params[STREAM_V1].fps': '20',
-        '.video_params[STREAM_V1].fcs': '1',
+    # Updates inside video_params[STREAM_Vx]
+    stream_updates = {
+        'STREAM_V1': {
+            'width': '1920',
+            'height': '1080',
+            'fps': '20',
+            'fcs': '1',
+        },
+        'STREAM_V3': {
+            'width': '128',
+            'height': '128',
+            'fps': '20',
+            'fcs': '1',
+        },
+        'STREAM_V4': {
+            'width': '320',
+            'height': '320',
+            'fps': '20',
+            'fcs': '1',
+        }
+    }
 
-        '.video_params[STREAM_V3].width': '128',
-        '.video_params[STREAM_V3].height': '128',
-        '.video_params[STREAM_V3].fps': '20',
-        '.video_params[STREAM_V3].fcs': '1',
+    for stream_key, updates in stream_updates.items():
+        content = update_nested_struct_block(content, 'video_boot_stream', f'video_params[{stream_key}]', updates)
 
-        '.video_params[STREAM_V4].width': '320',
-        '.video_params[STREAM_V4].height': '320',
-        '.video_params[STREAM_V4].fps': '20',
-        '.video_params[STREAM_V4].fcs': '1',
+    # Other flat params (not inside a nested struct)
+    flat_updates = {
         '.video_drop_frame[STREAM_V1]': '3',
         '.video_drop_frame[STREAM_V4]': '3',
         '.fcs_channel': '3',
-        '.extra_video_enable': '1'
+        '.extra_video_enable': '1',
     }
 
-    updated = update_struct_fields(content, "video_boot_stream", updates)
-    write_file(path, updated)
+    for param, val in flat_updates.items():
+        content = re.sub(
+            rf'({re.escape(param)}\s*=\s*)[^,;]+',
+            rf'\1{val}',
+            content
+        )
+
+    write_file(path, content)
 
 # Step 3: Modify video slot settings of ch2 and ch4
 def update_video_boot(path):
@@ -120,9 +166,13 @@ def disable_wifi_connection(file_path):
 # Step 5: Enable copying the NV12 image to the MD queue
 def enable_nv12_copy(path):
     content = read_file(path)
-    updates = {'.use_static_addr' : '0'}
-    updated = update_struct_fields(content, "video_v3_params", updates)
-    write_file(path, updated)
+    pattern = re.compile(
+    r'static\s+video_params_t\s+video_v3_params\s*=\s*\{.*?\};',
+    re.DOTALL
+    )
+    replacement = 'static video_params_t video_v3_params = {\n\t.use_static_addr = 0,\n};'
+    content = pattern.sub(replacement, content)
+    write_file(path, content)
     
 # Step 6: Enable waiting MD result functioN
 def enable_wait_md_result(path):
