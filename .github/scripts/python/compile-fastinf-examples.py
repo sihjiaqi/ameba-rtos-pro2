@@ -52,7 +52,7 @@ def update_nested_struct_block(content, struct_name, sub_struct_key, updates):
         for key, val in updates.items():
             block = re.sub(
                 rf'(\.{re.escape(key)}\s*=\s*)[^,]+',
-                rf'\1{val}',
+                lambda m: m.group(1) + val,
                 block
             )
 
