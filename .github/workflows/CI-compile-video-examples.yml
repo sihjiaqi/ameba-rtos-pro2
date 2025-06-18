@@ -5,18 +5,23 @@
 name: Build Video/NN Examples
 
 on:
-  push:
-    branches:
-      - 'dev-multi-os'
+  # push:
+  #   branches:
+  #     - 'main'
   #   paths:
   #     - '.github/workflows/CI-compile-video-examples.yml'
   #     - '.github/scripts/python/compile-video-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
   #     - 'project/realtek_amebapro2_v0_example/src/mmfv2_video_example/**'
   # pull_request:
   #   paths:
   #     - '.github/workflows/CI-compile-video-examples.yml'
   #     - '.github/scripts/python/compile-video-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
   #     - 'project/realtek_amebapro2_v0_example/src/mmfv2_video_example/**'
+
   workflow_dispatch:
     
 jobs:
@@ -56,9 +61,6 @@ jobs:
         if: runner.os == 'Windows'
         run: python3 .github/scripts/python/bootstrap-windows-env.py
 
-      - name: Confirm compiler is in PATH
-        run: where arm-none-eabi-gcc
-
       - name: Grant execute permission to all mp tools executable (Linux)
         if: runner.os == 'Linux'
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
@@ -74,7 +76,7 @@ jobs:
             icacls $_.FullName /grant Everyone:F
           }
         
-      - name: Run build script on Linux or macOS
+      - name: Run build script on ${{ runner.os }}
         if: runner.os != 'Windows'
         run: |
             examples=(${{ matrix.batch.examples }})
@@ -100,5 +102,5 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
-          name: video-example-binaries-${{ matrix.batch.id }}
+          name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
           path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin

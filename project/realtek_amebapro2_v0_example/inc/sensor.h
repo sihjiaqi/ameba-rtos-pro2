@@ -178,4 +178,5 @@ static const      char manual_iq[SENSOR_MAX][64] = {
 }
 #endif
 
+
 #endif /* __AMEBAPRO_SENSOR_EVAL_H */

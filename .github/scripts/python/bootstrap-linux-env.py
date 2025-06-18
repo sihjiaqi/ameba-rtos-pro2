@@ -17,10 +17,6 @@ def download_and_extract_toolchain():
     run(["curl", "-L", TOOLCHAIN_URL, "-o", str(TOOLCHAIN_ARCHIVE)])
     run(["tar", "-jxvf", str(TOOLCHAIN_ARCHIVE), "-C", str(TOOLCHAIN_DIR)])
 
-def install_build_tools():
-    run(["sudo", "apt-get", "update"])
-    run(["sudo", "apt-get", "install", "-y", "build-essential", "cmake", "git", "python3", "gcc-arm-none-eabi"])
-
 def append_to_github_path():
     github_path = os.getenv("GITHUB_PATH")
     with open(github_path, "a") as f:
@@ -29,7 +25,6 @@ def append_to_github_path():
 def main():
     try:
         download_and_extract_toolchain()
-        install_build_tools()
         append_to_github_path()
     except Exception as e:
         print(f"An error occurred: {e}")
