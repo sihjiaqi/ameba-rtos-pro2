@@ -31,13 +31,14 @@ def write_lines(path, lines):
 # Functions to modify specific files
 # Step 1: Enable FCS mode
 def enable_fcs_in_sensor_h(path):
+    print("Enabling FCS mode in sensor.h...")
     content = read_file(path)
     content = re.sub(r'#define\s+ENABLE_FCS\s+\d+', '#define ENABLE_FCS\t1', content)
     write_file(path, content)
     
 # Step 2: Enable ch0 FCS mode and modify resolution settings
 def update_nested_struct_block(content, struct_name, sub_struct_key, updates):
-
+    print(f"Updating nested struct block for {struct_name} with key {sub_struct_key}...")
     pattern = re.compile(
         rf'({re.escape(struct_name)}\s*=\s*\{{.*?\.{re.escape(sub_struct_key)}\s*=\s*\{{)(.*?)(\}}\s*,)', 
         re.DOTALL
@@ -61,6 +62,7 @@ def update_nested_struct_block(content, struct_name, sub_struct_key, updates):
 
 
 def update_video_user_boot(path):
+    print("Updating video_user_boot.c...")
     content = read_file(path)
 
     # Updates inside video_params[STREAM_Vx]
@@ -107,6 +109,7 @@ def update_video_user_boot(path):
 
 # Step 3: Modify video slot settings of ch2 and ch4
 def update_video_boot(path):
+    print("Updating video_boot.c...")
     content = read_file(path)
     content = re.sub(r'static\s+unsigned\s+char\s+video_boot_slot_num\[[0-9]+\]\s*=\s*\{[^}]+\}',
                      'static unsigned char video_boot_slot_num[5] = {2, 2, 3, 2, 3};',
@@ -115,6 +118,7 @@ def update_video_boot(path):
     
 # Step 4: Disable wifi connection
 def disable_wifi_connection(file_path):
+    print("Disabling WiFi connection in fast_inf_example.c...")
     lines = read_lines(file_path)
     in_setup = False
     updated_lines = []
@@ -145,6 +149,7 @@ def disable_wifi_connection(file_path):
 
 # Step 5: Enable copying the NV12 image to the MD queue
 def enable_nv12_copy(path):
+    print("Enabling NV12 copy in fast_inf_example.c...")
     content = read_file(path)
     pattern = re.compile(
     r'static\s+video_params_t\s+video_v3_params\s*=\s*\{.*?\};',
@@ -156,6 +161,7 @@ def enable_nv12_copy(path):
     
 # Step 6: Enable waiting MD result functioN
 def enable_wait_md_result(path):
+    print("Enabling WAIT_MD_RESULT in fast_inf_example.c...")
     content = read_file(path)
     content = re.sub(r'//\s*#define WAIT_MD_RESULT\s+1', '#define WAIT_MD_RESULT 1', content)
     write_file(path, content)
@@ -179,12 +185,14 @@ def enable_wait_md_result(path):
 
 # Step 8: Modify baud rate settings
 def set_uart_baudrate(path):
+    print("Setting UART baud rate to 3000000 in main.c...")
     content = read_file(path)
     content = re.sub(r'baud_rate\s*=\s*\d+;', 'baud_rate = 3000000;', content)
     write_file(path, content)
     
 # Step 9: Adjust flash speed settings
 def set_flash_speed(path):
+    print("Setting flash speed to 125MHz in hal_spic.h...")
     content = read_file(path)
     content = re.sub(r'#define\s+HIGH_SPEED_FLASH\s+\w+', '#define HIGH_SPEED_FLASH FLASH_SPEED_125MHz', content)
     write_file(path, content)
