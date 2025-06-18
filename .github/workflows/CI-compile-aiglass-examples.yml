@@ -5,19 +5,23 @@
 name: Build AI Glass Examples
 
 on:
-  push:
-    branches:
-      - 'dev-multi-os'
-    paths:
-      - '.github/workflows/CI-compile-aiglass-examples.yml'
-      - '.github/scripts/python/compile-aiglass-examples.py'
-      - 'project/realtek_amebapro2_v0_example/scenario/ai_glass/**'
-  pull_request:
-    paths:
-      - '.github/workflows/CI-compile-aiglass-examples.yml'
-      - '.github/scripts/python/compile-aiglass-examples.py'
-      - 'project/realtek_amebapro2_v0_example/scenario/ai_glass/**'
-
+  # push:
+  #   branches:
+  #     - 'main'
+  #   paths:
+  #     - '.github/workflows/CI-compile-aiglass-examples.yml'
+  #     - '.github/scripts/python/compile-aiglass-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - 'project/realtek_amebapro2_v0_example/scenario/ai_glass/**'
+  # pull_request:
+  #   paths:
+  #     - '.github/workflows/CI-compile-aiglass-examples.yml'
+  #     - '.github/scripts/python/compile-aiglass-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - 'project/realtek_amebapro2_v0_example/scenario/ai_glass/**'
+  
   workflow_dispatch:
 
 jobs:
@@ -25,7 +29,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest, macos-latest]
         # os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Checkout repository
@@ -39,11 +43,7 @@ jobs:
         if: runner.os == 'macOS'
         run: python3 .github/scripts/python/bootstrap-macos-env.py
 
-      - name: Install build tools on Linux
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake git python3 gcc-arm-none-eabi
-
-      - name: Grant execute permission to all mp tools executable
+      - name: Grant execute permission to all mp tools executable (Linux)
         if: runner.os == 'Linux'
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
       
@@ -51,7 +51,7 @@ jobs:
         if: runner.os == 'macOS'
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
 
-      - name: Run build script on Linux or macOS
+      - name: Run build script on ${{ runner.os }}
         if: runner.os != 'Windows'
         run: python3 .github/scripts/python/compile-aiglass-examples.py
 
