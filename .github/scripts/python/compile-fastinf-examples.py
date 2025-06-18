@@ -101,7 +101,7 @@ def update_video_user_boot(path):
     for param, val in flat_updates.items():
         content = re.sub(
             rf'({re.escape(param)}\s*=\s*)[^,;]+',
-            rf'\1{val}',
+            lambda m: m.group(1) + val,
             content
         )
 
