@@ -1,0 +1,74 @@
+# This workflow is to build component examples and upload the binary files as artifacts.
+# It is triggered on push or pull request events for specific paths related to component examples.
+# It also allows manual triggering via workflow_dispatch.
+
+name: Build Component Examples
+
+on:
+  push:
+    branches:
+      - 'dev-component'
+
+  #   paths:
+  #     - '.github/workflows/CI-compile-component-examples.yml'
+  #     - '.github/scripts/python/compile-component-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - 'component/example/**'
+  # pull_request:
+  #   paths:
+  #     - '.github/workflows/CI-compile-component-examples.yml'
+  #     - '.github/scripts/python/compile-component-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - 'component/example/**'
+
+  workflow_dispatch:
+
+jobs:
+  build-component-examples:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        batch:
+          - id: batch1
+            examples: "coap eap ext_storage_update_ota fatfs http_client"
+          - id: batch2
+            examples: "http_download httpc httpd kvs_producer_mmf kvs_webrtc_mmf"
+          - id: batch3
+            examples: "mcast media_fmp4 media_framework media_mp4_demuxer media_uvcd"
+          - id: batch4
+            examples: "media_video_to_storage mqtt nn_file_tester nonblock_connect ota_http"
+          - id: batch5
+            examples: "qr_code_scanner sd_hotplug sntp_showtime socket_select socket_tcp_trx"
+          - id: batch6
+            examples: "sqlite ssl_client ssl_download ssl_server std_file"
+          - id: batch7
+            examples: "usb_cdc usb_cdc_snapshot usb_dfu_ota usb_example usb_mass_storage"
+          - id: batch8
+            examples: "wifi_roaming_client_plus wifi_roaming_plus wlan_scenario"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Bootstrap Linux Environment
+        if: runner.os == 'Linux'
+        run: python3 .github/scripts/python/bootstrap-linux-env.py
+    
+      - name: Bootstrap MacOS Environment
+        if: runner.os == 'macOS'
+        run: python3 .github/scripts/python/bootstrap-macos-env.py
+    
+      - name: Run build script on ${{ runner.os }}
+        run: python3 .github/scripts/python/compile-component-examples.py
+    
+      - name: Build complete
+        run: echo "Build finished."
+    
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: component-example-${{ matrix.os }}-${{ matrix.batch.id }}
+          path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
