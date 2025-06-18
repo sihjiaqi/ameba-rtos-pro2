@@ -73,5 +73,5 @@ jobs:
       - name: Upload binary file
         uses: actions/upload-artifact@v4
         with:
-          name: aiglass-example-binary
+          name: aiglass-example-${{ matrix.os }}
           path: project/realtek_amebapro2_v0_example/GCC-RELEASE/build/flash_ntz.bin

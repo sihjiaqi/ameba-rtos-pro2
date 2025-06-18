@@ -86,5 +86,5 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
-          name: video-example-binaries-${{ matrix.batch.id }}
+          name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
           path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
