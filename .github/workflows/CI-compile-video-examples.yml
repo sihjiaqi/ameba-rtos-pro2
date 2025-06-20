@@ -100,8 +100,8 @@ jobs:
 
       - name: Set bashrc path
         if: always() && runner.os == 'Windows'
-        run: echo "BASHRC_PATH=C:\Users\$env:USERNAME\msys64_v10_3\msys64\home\$env:USERNAME\.bashrc" >> $env:GITHUB_ENV
-
+        run: echo "BASHRC_PATH=C:\Users\runneradmin\msys64_v10_3\msys64\home\runneradmin\.bashrc" >> $env:GITHUB_ENV
+        
       - name: Upload .bashrc as artifact
         if: always() && runner.os == 'Windows'
         uses: actions/upload-artifact@v4
