@@ -110,11 +110,11 @@ def run_post_script():
     done_file = Path(str(POST_FILE) + ".done")
     if done_file.exists():
         done_file.unlink()
-        print("✅ Removed .done file to rerun post script.")
+        print("Removed .done file to rerun post script.")
 
     # Run the post script via bash
     subprocess.run([str(BASH_PATH), str(POST_FILE)], check=True)
-    print("✅ Ran 05-home-dir.post script.")
+    print("Ran 05-home-dir.post script.")
 
 def main():
     try:
