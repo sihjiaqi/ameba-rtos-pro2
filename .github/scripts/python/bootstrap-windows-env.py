@@ -101,7 +101,9 @@ def main():
         launch_msys_shell() 
         install_cmake()
         set_cmake_path()
+        launch_msys_shell()
         set_toolchain_path()
+        launch_msys_shell()
         
     except Exception as e:
         print(f"An error occurred: {e}")
