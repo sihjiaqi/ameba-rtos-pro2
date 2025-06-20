@@ -93,7 +93,7 @@ def build_example(example):
     os.chdir(build_dir)
 
     # Run cmake config
-    run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE} -DVIDEO_EXAMPLE=on')
+    run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DVIDEO_EXAMPLE=on')
 
     # Build target
     if "nn" in example.lower():
