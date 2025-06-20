@@ -61,23 +61,6 @@ jobs:
         if: runner.os == 'Windows'
         run: python3 .github/scripts/python/bootstrap-windows-env.py
 
-      - name: Set CMake path in .bashrc
-        shell: msys2 {0}
-        run: |
-          echo "export PATH=/c/Program\\ Files/CMake/bin:\$PATH" > ~/.bashrc
-          echo "✅ CMake path added to .bashrc"
-
-      - name: Conditionally set toolchain path in .bashrc
-        shell: msys2 {0}
-        run: |
-          if [ -d "../../asdk-10.3.0" ]; then
-            echo "asdk-10.3.0 exist"
-            echo "export PATH=/asdk-10.3.0/mingw32/newlib/bin:\$PATH" >> ~/.bashrc
-          else
-            echo "Toolchain directory not found"
-          fi
-
-
       - name: Grant execute permission to all mp tools executable (Linux)
         if: runner.os == 'Linux'
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
@@ -115,12 +98,12 @@ jobs:
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
 
-      - name: Set bashrc path
-        if: runner.os == 'Windows'
+      - name: Set bashrc path]
+        if: always() && runner.os == 'Windows'
         run: echo "BASHRC_PATH=C:\msys64\home\$env:USERNAME\.bashrc" >> $env:GITHUB_ENV
 
       - name: Upload .bashrc as artifact
-        if: runner.os == 'Windows'
+        if: always() && runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: bashrc-file
