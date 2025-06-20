@@ -21,6 +21,8 @@ MSYS_CMD = MSYS_ROOT / "msys2_shell.cmd"
 BASHRC_PATH = MSYS_HOME / ".bashrc"
 POST_FILE = MSYS_ROOT / "etc/post-install/05-home-dir.post"
 
+BASH_PATH = MSYS_ROOT / "usr/bin/bash.exe"
+
 def run(cmd, shell=False):
     print(f"Running: {' '.join(cmd)}")
     subprocess.run(cmd, check=True, shell=shell)
@@ -41,10 +43,10 @@ def download_extract_toolchain():
     TOOLCHAIN_DIR.mkdir(parents=True, exist_ok=True)
     download_file(TOOLCHAIN_URL, TOOLCHAIN_ZIP)
     
-    with zipfile.ZipFile(TOOLCHAIN_ZIP, 'r') as zip_ref:
-        zip_ref.extractall(TOOLCHAIN_DIR)
+    # with zipfile.ZipFile(TOOLCHAIN_ZIP, 'r') as zip_ref:
+    #     zip_ref.extractall(TOOLCHAIN_DIR)
     
-    print(f"Toolchain extracted to: {TOOLCHAIN_DIR}")
+    # print(f"Toolchain extracted to: {TOOLCHAIN_DIR}")
                 
 # Set the home directory for MSYS
 def set_home_directory():
@@ -103,11 +105,23 @@ def list_msys_home_contents():
         if item.is_file():
             print(f"File: {item.name}")
 
+def run_post_script():
+    # Remove .done file to allow rerun
+    done_file = Path(str(POST_FILE) + ".done")
+    if done_file.exists():
+        done_file.unlink()
+        print("✅ Removed .done file to rerun post script.")
+
+    # Run the post script via bash
+    subprocess.run([str(BASH_PATH), str(POST_FILE)], check=True)
+    print("✅ Ran 05-home-dir.post script.")
+
 def main():
     try:
         download_extract_msys()
         download_extract_toolchain()
         set_home_directory()
+        run_post_script()
         set_toolchain_path()
         launch_msys_shell() 
         install_cmake()
