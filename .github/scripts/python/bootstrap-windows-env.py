@@ -11,7 +11,7 @@ TOOLCHAIN_URL = "https://github.com/Ameba-AIoT/ameba-toolchain/releases/download
 
 TOOLCHAIN_DIR = Path.home() / "toolchain"
 TOOLCHAIN_ZIP = TOOLCHAIN_DIR / "toolchain.zip"
-TOOLCHAIN_BIN = "/asdk-10.3.0/mingw32/newlib/bin"
+TOOLCHAIN_BIN = TOOLCHAIN_DIR / "asdk-10.3.0/mingw32/newlib/bin"
 CMAKE_INSTALLER = Path.home() / "cmake-installer.msi"
 CMAKE_PATH = Path("/c/Program Files/CMake/bin")
 MSYS_7Z = Path.home() / "msys64_v10_3.7z"
@@ -102,22 +102,18 @@ def list_msys_home_contents():
     for item in MSYS_HOME.iterdir():
         if item.is_file():
             print(f"File: {item.name}")
-        elif item.is_dir():
-            print(f"Dir: {item.name}")
-        else:
-            print(f"Other: {item.name}")
 
 def main():
     try:
         download_extract_msys()
         download_extract_toolchain()
         set_home_directory()
+        set_toolchain_path()
         launch_msys_shell() 
         install_cmake()
         list_msys_home_contents()
         # set_cmake_path()
         # launch_msys_shell()
-        # set_toolchain_path()
         # launch_msys_shell()
         
     except Exception as e:
