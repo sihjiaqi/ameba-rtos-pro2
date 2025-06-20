@@ -11,9 +11,9 @@ TOOLCHAIN_URL = "https://github.com/Ameba-AIoT/ameba-toolchain/releases/download
 
 TOOLCHAIN_DIR = Path.home() / "toolchain"
 TOOLCHAIN_ZIP = TOOLCHAIN_DIR / "toolchain.zip"
-TOOLCHAIN_BIN = TOOLCHAIN_DIR / "asdk-10.3.0/mingw32/newlib/bin"
+TOOLCHAIN_BIN = "/asdk-10.3.0/mingw32/newlib/bin"
 CMAKE_INSTALLER = Path.home() / "cmake-installer.msi"
-CMAKE_PATH = Path("C:/Program Files/CMake/bin")
+CMAKE_PATH = Path("/c/Program Files/CMake/bin")
 MSYS_7Z = Path.home() / "msys64_v10_3.7z"
 MSYS_ROOT = Path.home() / "msys64_v10_3/msys64"
 MSYS_HOME = MSYS_ROOT / "home" / os.getenv("USERNAME")
@@ -75,14 +75,24 @@ def install_cmake():
     # Install cmake silently and without restarting the system after installation
     run(["msiexec", "/i", str(CMAKE_INSTALLER), "/quiet", "/norestart"], shell=True)
 
-def append_to_github_path():
-    github_path = os.environ.get("GITHUB_PATH")
-    if github_path:
-        lines = [str(CMAKE_PATH), str(TOOLCHAIN_BIN)]
-        with open(github_path, "a") as f:
-            for p in lines:
-                f.write(p + "\n")
+def set_cmake_path():
+    print("Setting MSYS path...")
+    shell_lines = [
+        f'export PATH={CMAKE_PATH}:$PATH\n'
+    ]
+    with open(BASHRC_PATH, "w") as f:
+        f.write("\n".join(shell_lines))
 
+def set_toolchain_path():
+    print("Setting toolchain path...")
+    shell_lines = [
+        'if [ -d "../../asdk-10.3.0" ]; then',
+        '    echo "asdk-10.3.0 exist"',
+        f'    export PATH={TOOLCHAIN_BIN}:$PATH\n'
+    ]
+    with open(BASHRC_PATH, "a") as f:
+        f.write("\n".join(shell_lines))
+    
 def main():
     try:
         download_extract_msys()
@@ -90,8 +100,9 @@ def main():
         set_home_directory()
         launch_msys_shell() 
         install_cmake()
-        append_to_github_path()
-
+        set_cmake_path()
+        set_toolchain_path()
+        
     except Exception as e:
         print(f"An error occurred: {e}")
         exit(1)
