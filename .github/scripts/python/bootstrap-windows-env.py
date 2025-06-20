@@ -92,7 +92,21 @@ def set_toolchain_path():
     ]
     with open(BASHRC_PATH, "a") as f:
         f.write("\n".join(shell_lines))
-    
+
+def list_msys_home_contents():
+    print(f"Listing contents of MSYS home: {MSYS_HOME}")
+    if not MSYS_HOME.exists():
+        print("MSYS home directory does not exist.")
+        return
+
+    for item in MSYS_HOME.iterdir():
+        if item.is_file():
+            print(f"File: {item.name}")
+        elif item.is_dir():
+            print(f"Dir: {item.name}")
+        else:
+            print(f"Other: {item.name}")
+
 def main():
     try:
         download_extract_msys()
@@ -100,6 +114,7 @@ def main():
         set_home_directory()
         launch_msys_shell() 
         install_cmake()
+        list_msys_home_contents()
         # set_cmake_path()
         # launch_msys_shell()
         # set_toolchain_path()
