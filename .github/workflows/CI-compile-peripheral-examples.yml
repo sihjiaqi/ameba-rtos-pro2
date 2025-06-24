@@ -1,0 +1,43 @@
+name: Build Peripheral Examples
+on:
+  push:
+    branches:
+      - 'dev-peripheral'
+  workflow_dispatch:
+jobs:
+  build-peripheral-examples:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+
+        # Define examples in batches to run them in parallel
+        batch:
+          - id: batch1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Bootstrap Linux Environment
+        if: runner.os == 'Linux'
+        run: python3 .github/scripts/python/bootstrap-linux-env.py
+
+      - name: Bootstrap MacOS Environment
+        if: runner.os == 'macOS'
+        run: python3 .github/scripts/python/bootstrap-macos-env.py
+
+      - name: Bootstrap Windows Environment
+        if: runner.os == 'Windows'
+        run: python3 .github/scripts/python/bootstrap-windows-env.py
+
+      - name: Compile Peripheral Examples
+        run: python3 .github/scripts/python/compile-peripheral-examples.py --examples "${{ matrix.batch.examples }}"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+            name: peripheral-examples-${{ matrix.os }}-${{ matrix.batch.id }}
+            path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
+          
