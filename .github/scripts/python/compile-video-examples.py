@@ -47,6 +47,7 @@ EXAMPLES = [
     "mmf2_video_example_timelapse_mp4_init"
 ]
 
+print(os.path.abspath(__file__))
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", "..", "..", "..", "project", "realtek_amebapro2_v0_example"))
 SRC_DIR = os.path.join(PROJECT_DIR, "src", "mmfv2_video_example")
 GCC_RELEASE_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE")

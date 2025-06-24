@@ -105,7 +105,20 @@ def launch_msys_shell_test():
         "cmd.exe", "/C",
         f'"{MSYS_CMD}" -defterm -mingw32 -no-start -shell bash -c "echo PATH=$PATH && cmake --version"'
     ]
+    
     subprocess.run(" ".join(cmd), shell=True)
+
+# def check_msys_env():
+#     subprocess.run([
+#         "cmd.exe", "/C",
+#         '"C:\\msys64\\usr\\bin\\bash.exe" -c \\"echo MSYSTEM=$MSYSTEM && uname -a\\"'
+#     ])
+    
+def check_msys_env():
+    subprocess.run(
+        'cmd.exe /C ""C:\\msys64\\usr\\bin\\bash.exe" -c \'echo MSYSTEM=$MSYSTEM && uname -a && which cmake\'"',
+        shell=True
+    )
 
 def main():
     try:
@@ -116,6 +129,7 @@ def main():
         set_cmake_path()
         set_toolchain_path()
         launch_msys_shell_test()
+        check_msys_env()
         print(f"Bootstrap completed successfully.")
     except Exception as e:
         print(f"An error occurred: {e}")

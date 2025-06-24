@@ -57,9 +57,9 @@ jobs:
         if: runner.os == 'macOS'
         run: python3 .github/scripts/python/bootstrap-macos-env.py
 
-      # - name: Bootstrap Windows Environment
-      #   if: runner.os == 'Windows'
-      #   run: python3 .github/scripts/python/bootstrap-windows-env.py
+      - name: Bootstrap Windows Environment
+        if: runner.os == 'Windows'
+        run: python3 .github/scripts/python/bootstrap-windows-env.py
 
       - name: Grant execute permission to all mp tools executable (Linux)
         if: runner.os == 'Linux'
@@ -75,34 +75,41 @@ jobs:
           Get-ChildItem -Path "project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
             icacls $_.FullName /grant Everyone:F
           }
-        
-      - name: Run build script on ${{ runner.os }}
-        if: runner.os != 'Windows'
-        run: |
-            examples=(${{ matrix.batch.examples }})
-            for example in "${examples[@]}"; do
-            echo "Launching build for $example"
-            python3 .github/scripts/python/compile-video-examples.py "$example" &
-            done
-            wait
             
-      - name: Bootstrap and build on Windows
+      - name: Test MSYS2 and Python script
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: C:\Users\runneradmin\msys64_v10_3\msys64\msys2_shell.cmd -mingw64 -c
         run: |
-          python .github/scripts/python/bootstrap-windows-env.py
-          $examples = "${{ matrix.batch.examples }}".Split(" ")
-          foreach ($example in $examples) {
-            Write-Host "Launching build for $example"
-            python .github/scripts/python/compile-video-examples.py $example
-          }
+          'echo "Running inside MSYS2"; python --version; ls -l .github/scripts/python/; python -u .github/scripts/python/compile-video-examples.py mmf2_video_example_v1_init'
+
+ 
+      # - name: Build in MSYS2
+      #   if: runner.os == 'Windows'
+      #   shell: C:\Users\runneradmin\msys64_v10_3\msys64\msys2_shell.cmd -mingw64 -c "{0}"
+      #   run: |
+      #     cd "$GITHUB_WORKSPACE"
+
+      #     # Check if python exists
+      #     if ! command -v python &> /dev/null; then
+      #       echo "Python not found, installing with pacman..."
+      #       pacman -Sy --noconfirm python
+      #     else
+      #       echo "Python found: $(which python)"
+      #       python --version
+      #     fi
+
+      #     # Run the examples
+      #     for example in ${{ matrix.batch.examples }}; do
+      #       echo "Launching build for $example"
+      #       python .github/scripts/python/compile-video-examples.py $example
+      #     done
 
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
 
-      # - name: Set bashrc path
-      #   if: runner.os == 'Windows'
-      #   run: echo "BASHRC_PATH=C:\msys64\home\$env:USERNAME\.bashrc" >> $env:GITHUB_ENV
+      - name: Set bashrc path
+        if: runner.os == 'Windows'
+        run: echo "BASHRC_PATH=C:\msys64\home\$env:USERNAME\.bashrc" >> $env:GITHUB_ENV
 
       - name: Upload .bashrc as artifact
         if: runner.os == 'Windows'
