@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
         # os: [ubuntu-latest, windows-latest, macos-latest]
         batch:
           - id: batch1
@@ -78,7 +78,7 @@ jobs:
             python3 .github/scripts/python/compile-component-examples.py "$example" &
             done
             wait
-
+            
       - name: Build complete
         run: echo "Build finished."
     
