@@ -61,9 +61,24 @@ jobs:
         if: runner.os == 'macOS'
         run: python3 .github/scripts/python/bootstrap-macos-env.py
     
+      - name: Grant execute permission to all mp tools executable (Linux)
+        if: runner.os == 'Linux'
+        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
+      
+      - name: Grant execute permission to all mp tools executable (macOS)
+        if: runner.os == 'macOS'
+        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
+
       - name: Run build script on ${{ runner.os }}
-        run: python3 .github/scripts/python/compile-component-examples.py
-    
+        if: runner.os != 'Windows'
+        run: |
+            examples=(${{ matrix.batch.examples }})
+            for example in "${examples[@]}"; do
+            echo "Launching build for $example"
+            python3 .github/scripts/python/compile-component-examples.py "$example" &
+            done
+            wait
+
       - name: Build complete
         run: echo "Build finished."
     
