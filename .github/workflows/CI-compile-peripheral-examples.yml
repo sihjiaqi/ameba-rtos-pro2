@@ -43,6 +43,14 @@ jobs:
       - name: Bootstrap Windows Environment
         if: runner.os == 'Windows'
         run: python3 .github/scripts/python/bootstrap-windows-env.py
+        
+      - name: Grant execute permission to all mp tools executable (Linux)
+        if: runner.os == 'Linux'
+        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
+      
+      - name: Grant execute permission to all mp tools executable (macOS)
+        if: runner.os == 'macOS'
+        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
 
       - name: Run build script on ${{ runner.os }}
         if: runner.os != 'Windows'
@@ -53,7 +61,7 @@ jobs:
             python3 .github/scripts/python/compile-peripheral-examples.py "$example" &
             done
             wait
-            
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
