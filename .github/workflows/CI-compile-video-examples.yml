@@ -115,15 +115,28 @@ jobs:
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
 
-      - name: List output binaries before upload
+      - name: List binaries from MSYS2
         if: runner.os == 'Windows'
-        run: dir D:\a\w\src\rtos\project\realtek_amebapro2_v0_example\bin_outputs
+        shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
+        run: |
+          echo "PWD from MSYS2:"
+          pwd
+          echo "Listing built .bin files:"
+          ls -lh /d/a/w/src/project/realtek_amebapro2_v0_example/bin_outputs
 
+      - name: Copy output bins to workspace
+        if: runner.os == 'Windows'
+        shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
+        run: |
+          echo "Copying bin files to workspace"
+          mkdir -p "$GITHUB_WORKSPACE/rtos/project/realtek_amebapro2_v0_example/bin_outputs"
+          cp -v /d/a/w/src/project/realtek_amebapro2_v0_example/bin_outputs/*.bin \
+                "$GITHUB_WORKSPACE/rtos/project/realtek_amebapro2_v0_example/bin_outputs/"
 
-      # Upload binaries to GitHub Artifacts
       - name: Upload binaries
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
-          path: D:\a\w\src\rtos\project\realtek_amebapro2_v0_example\bin_outputs\*.bin
+          path: D:\a\w\src\project\realtek_amebapro2_v0_example\bin_outputs\*.bin
+
