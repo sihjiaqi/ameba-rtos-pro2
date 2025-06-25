@@ -8,38 +8,21 @@ on:
   push:
     branches:
       - 'dev-multi-os'
-  #   paths:
-  #     - '.github/workflows/CI-compile-video-examples.yml'
-  #     - '.github/scripts/python/compile-video-examples.py'
-  #     - '.github/scripts/python/bootstrap-linux-env.py'
-  #     - '.github/scripts/python/bootstrap-macos-env.py'
-  #     - 'project/realtek_amebapro2_v0_example/src/mmfv2_video_example/**'
-  # pull_request:
-  #   paths:
-  #     - '.github/workflows/CI-compile-video-examples.yml'
-  #     - '.github/scripts/python/compile-video-examples.py'
-  #     - '.github/scripts/python/bootstrap-linux-env.py'
-  #     - '.github/scripts/python/bootstrap-macos-env.py'
-  #     - 'project/realtek_amebapro2_v0_example/src/mmfv2_video_example/**'
-
   workflow_dispatch:
-    
+
 jobs:
   build-all-examples:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [windows-latest]
-         # os: [ubuntu-latest, windows-latest, macos-latest]
-
-        # Define examples in batches to run them in parallel
         batch:
-          - id: batch1
-            examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init mmf2_video_example_v3_init"
-          - id: batch2
-            examples: "mmf2_video_example_av_rtsp_mp4_init mmf2_video_example_joint_test_init mmf2_video_example_joint_test_rtsp_mp4_init mmf2_video_example_2way_audio_pcmu_doorbell_init mmf2_video_example_2way_audio_pcmu_init mmf2_video_example_array_rtsp_init mmf2_video_example_v1_param_change_init mmf2_video_example_v1_day_night_change_init mmf2_video_example_v1_mask_init"
-          - id: batch3
-            examples: "mmf2_video_example_v1_rate_control_init mmf2_video_example_av_mp4_httpfs_init mmf2_video_example_vipnn_rtsp_init mmf2_video_example_face_rtsp_init mmf2_video_example_fd_lm_mfn_sim_rtsp_init mmf2_video_example_joint_test_all_nn_rtsp_init mmf2_video_example_demuxer_rtsp_init mmf2_video_example_h264_pcmu_array_mp4_init mmf2_video_example_audio_vipnn_init"
+          # - id: batch1
+          #   examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init mmf2_video_example_v3_init"
+          # - id: batch2
+          #   examples: "mmf2_video_example_av_rtsp_mp4_init mmf2_video_example_joint_test_init mmf2_video_example_joint_test_rtsp_mp4_init mmf2_video_example_2way_audio_pcmu_doorbell_init mmf2_video_example_2way_audio_pcmu_init mmf2_video_example_array_rtsp_init mmf2_video_example_v1_param_change_init mmf2_video_example_v1_day_night_change_init mmf2_video_example_v1_mask_init"
+          # - id: batch3
+          #   examples: "mmf2_video_example_v1_rate_control_init mmf2_video_example_av_mp4_httpfs_init mmf2_video_example_vipnn_rtsp_init mmf2_video_example_face_rtsp_init mmf2_video_example_fd_lm_mfn_sim_rtsp_init mmf2_video_example_joint_test_all_nn_rtsp_init mmf2_video_example_demuxer_rtsp_init mmf2_video_example_h264_pcmu_array_mp4_init mmf2_video_example_audio_vipnn_init"
           - id: batch4
             examples: "mmf2_video_example_md_rtsp_init mmf2_video_example_md_mp4_init mmf2_video_example_bayercap_rtsp_init mmf2_video_example_md_nn_rtsp_init mmf2_video_example_joint_test_rtsp_mp4_init_fcs mmf2_video_example_vipnn_facedet_init mmf2_video_example_jpeg_external_init mmf2_video_example_vipnn_facedet_sync_init mmf2_video_example_vipnn_facedet_sync_snapshot_init"
           - id: batch5
@@ -50,6 +33,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: rtos 
+          
+      - name: Move to short path (C:\r)
+        shell: pwsh
+        run: |
+          mkdir C:\r
+          Copy-Item -Path "$env:GITHUB_WORKSPACE\rtos\*" -Destination "C:\r" -Recurse -Force
+          echo "GITHUB_WORKSPACE=C:\r" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
@@ -61,7 +51,7 @@ jobs:
 
       - name: Bootstrap Windows Environment
         if: runner.os == 'Windows'
-        run: python3 rtos/.github/scripts/python/bootstrap-windows-env.py
+        run: python3 C:\r\.github\scripts\python\bootstrap-windows-env.py
 
       - name: Grant execute permission to all mp tools executable (Linux)
         if: runner.os == 'Linux'
@@ -74,17 +64,15 @@ jobs:
       - name: Grant execute permission to all mp tools executable (Windows)
         if: runner.os == 'Windows'
         run: |
-          Get-ChildItem -Path "rtos/project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
+          Get-ChildItem -Path "C:\r\project\realtek_amebapro2_v0_example\GCC-RELEASE\mp\*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
             icacls $_.FullName /grant Everyone:F
           }
-            
+
       - name: Build all examples in batch (Windows MSYS2)
         if: runner.os == 'Windows'
         shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
         run: |
           export MSYSTEM=MINGW64
-
-          # Setup paths for toolchain and cmake
           export TOOLCHAIN_PATH="/c/Users/runneradmin/toolchain/asdk-10.3.0/mingw32/newlib/bin"
           export CMAKE_PATH="/c/Program Files/CMake/bin"
           export PATH="$TOOLCHAIN_PATH:$CMAKE_PATH:/c/Users/runneradmin/msys64_v10_3/msys64/mingw64/bin:/c/Users/runneradmin/msys64_v10_3/msys64/usr/bin:$PATH"
@@ -93,19 +81,14 @@ jobs:
           echo "PATH=$PATH"
           which cmake || echo "cmake not found"
           cmake --version || echo "cmake version failed"
-          
-          mkdir -p /d/a/w
-          cp -r "$GITHUB_WORKSPACE/rtos" /d/a/w/src
-          cd /d/a/w/src
+
+          cd /c/r
 
           # Clean build directory for fresh start
           rm -rf build
           mkdir build
 
-          # Debug print
           echo "Building examples: ${{ matrix.batch.examples }}"
-
-          # Build each example
           for example in ${{ matrix.batch.examples }}; do
             echo "Building: $example"
             python3 -u .github/scripts/python/compile-video-examples.py $example
@@ -118,10 +101,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
         run: |
-          echo "PWD from MSYS2:"
-          pwd
           echo "Listing built .bin files:"
-          ls -lh /d/a/w/src/project/realtek_amebapro2_v0_example/bin_outputs
+          ls -lh /c/r/project/realtek_amebapro2_v0_example/bin_outputs || true
 
       - name: Copy output bins to workspace
         if: runner.os == 'Windows'
@@ -129,13 +110,12 @@ jobs:
         run: |
           echo "Copying bin files to workspace"
           mkdir -p "$GITHUB_WORKSPACE/rtos/project/realtek_amebapro2_v0_example/bin_outputs"
-          cp -v /d/a/w/src/project/realtek_amebapro2_v0_example/bin_outputs/*.bin \
-                "$GITHUB_WORKSPACE/rtos/project/realtek_amebapro2_v0_example/bin_outputs/"
+          cp -v /c/r/project/realtek_amebapro2_v0_example/bin_outputs/*.bin \
+                "$GITHUB_WORKSPACE/rtos/project/realtek_amebapro2_v0_example/bin_outputs/" || true
 
       - name: Upload binaries
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
-          path: D:\a\w\src\project\realtek_amebapro2_v0_example\bin_outputs\*.bin
-
+          path: rtos/project/realtek_amebapro2_v0_example/bin_outputs/*.bin
