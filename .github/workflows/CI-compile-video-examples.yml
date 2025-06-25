@@ -35,7 +35,8 @@ jobs:
         # Define examples in batches to run them in parallel
         batch:
           - id: batch1
-            examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init mmf2_video_example_v3_init"
+            examples: "mmf2_video_example_v1_init"
+          #   examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init mmf2_video_example_v3_init"
           # - id: batch2
           #   examples: "mmf2_video_example_av_rtsp_mp4_init mmf2_video_example_joint_test_init mmf2_video_example_joint_test_rtsp_mp4_init mmf2_video_example_2way_audio_pcmu_doorbell_init mmf2_video_example_2way_audio_pcmu_init mmf2_video_example_array_rtsp_init mmf2_video_example_v1_param_change_init mmf2_video_example_v1_day_night_change_init mmf2_video_example_v1_mask_init"
           # - id: batch3
@@ -48,79 +49,81 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          path: rtos 
 
       - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
-        run: python3 .github/scripts/python/bootstrap-linux-env.py
+        run: python3 rtos/.github/scripts/python/bootstrap-linux-env.py
 
       - name: Bootstrap MacOS Environment
         if: runner.os == 'macOS'
-        run: python3 .github/scripts/python/bootstrap-macos-env.py
+        run: python3 rtos/.github/scripts/python/bootstrap-macos-env.py
 
       - name: Bootstrap Windows Environment
         if: runner.os == 'Windows'
-        run: python3 .github/scripts/python/bootstrap-windows-env.py
+        run: python3 rtos/.github/scripts/python/bootstrap-windows-env.py
 
       - name: Grant execute permission to all mp tools executable (Linux)
         if: runner.os == 'Linux'
-        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
+        run: chmod +x rtos/project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
       
       - name: Grant execute permission to all mp tools executable (macOS)
         if: runner.os == 'macOS'
-        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
+        run: chmod +x rtos/project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
 
       - name: Grant execute permission to all mp tools executable (Windows)
         if: runner.os == 'Windows'
         run: |
-          Get-ChildItem -Path "project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
+          Get-ChildItem -Path "rtos/project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
             icacls $_.FullName /grant Everyone:F
           }
             
-      - name: Test MSYS2 and Python script
+      - name: Build all examples in batch (Windows MSYS2)
         if: runner.os == 'Windows'
-        shell: C:\Users\runneradmin\msys64_v10_3\msys64\msys2_shell.cmd -mingw64 -c
+        shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
         run: |
-          'echo "Running inside MSYS2"; python --version; ls -l .github/scripts/python/; python -u .github/scripts/python/compile-video-examples.py mmf2_video_example_v1_init'
+          export MSYSTEM=MINGW64
 
- 
-      # - name: Build in MSYS2
-      #   if: runner.os == 'Windows'
-      #   shell: C:\Users\runneradmin\msys64_v10_3\msys64\msys2_shell.cmd -mingw64 -c "{0}"
-      #   run: |
-      #     cd "$GITHUB_WORKSPACE"
+          # Setup paths for toolchain and cmake
+          export TOOLCHAIN_PATH="/c/Users/runneradmin/toolchain/asdk-10.3.0/mingw32/newlib/bin"
+          export CMAKE_PATH="/c/Program Files/CMake/bin"
+          export PATH="$TOOLCHAIN_PATH:$CMAKE_PATH:/c/Users/runneradmin/msys64_v10_3/msys64/mingw64/bin:/c/Users/runneradmin/msys64_v10_3/msys64/usr/bin:$PATH"
 
-      #     # Check if python exists
-      #     if ! command -v python &> /dev/null; then
-      #       echo "Python not found, installing with pacman..."
-      #       pacman -Sy --noconfirm python
-      #     else
-      #       echo "Python found: $(which python)"
-      #       python --version
-      #     fi
+          echo "Running in MSYS2"
+          echo "PATH=$PATH"
+          which cmake || echo "cmake not found"
+          cmake --version || echo "cmake version failed"
+          
+          mkdir -p /d/a/w
+          cp -r "$GITHUB_WORKSPACE/rtos" /d/a/w/src
+          cd /d/a/w/src
 
-      #     # Run the examples
-      #     for example in ${{ matrix.batch.examples }}; do
-      #       echo "Launching build for $example"
-      #       python .github/scripts/python/compile-video-examples.py $example
-      #     done
+          # Clean build directory for fresh start
+          rm -rf build
+          mkdir build
+
+          # Debug print
+          echo "Building examples: ${{ matrix.batch.examples }}"
+
+          # Build each example
+          for example in ${{ matrix.batch.examples }}; do
+            echo "Building: $example"
+            python3 -u .github/scripts/python/compile-video-examples.py $example
+          done
 
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
 
-      - name: Set bashrc path
+      - name: List output binaries before upload
         if: runner.os == 'Windows'
-        run: echo "BASHRC_PATH=C:\msys64\home\$env:USERNAME\.bashrc" >> $env:GITHUB_ENV
+        run: dir D:\a\w\src\rtos\project\realtek_amebapro2_v0_example\bin_outputs
 
-      - name: Upload .bashrc as artifact
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: bashrc-file
-          path: ${{ env.BASHRC_PATH }}
 
       # Upload binaries to GitHub Artifacts
       - name: Upload binaries
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
-          path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
+          path: D:\a\w\src\rtos\project\realtek_amebapro2_v0_example\bin_outputs\*.bin
