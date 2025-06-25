@@ -44,9 +44,16 @@ jobs:
         if: runner.os == 'Windows'
         run: python3 .github/scripts/python/bootstrap-windows-env.py
 
-      - name: Compile Peripheral Examples
-        run: python3 .github/scripts/python/compile-peripheral-examples.py --examples "${{ matrix.batch.examples }}"
-
+      - name: Run build script on ${{ runner.os }}
+        if: runner.os != 'Windows'
+        run: |
+            examples=(${{ matrix.batch.examples }})
+            for example in "${examples[@]}"; do
+            echo "Launching build for $example"
+            python3 .github/scripts/python/compile-peripheral-examples.py "$example" &
+            done
+            wait
+            
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
