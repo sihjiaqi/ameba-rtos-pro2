@@ -108,7 +108,7 @@ def build_example(example):
     print(f"Saving built binary to: {output_bin_path}")
     
     # Clean for next build
-    # run('make clean', cwd=build_dir)
+    run('make clean', cwd=build_dir)
 
 def main():
     try:
