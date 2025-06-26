@@ -85,7 +85,7 @@ jobs:
         if: runner.os != 'Windows'
         run: python3 ${{ env.SOURCE_ROOT }}/.github/scripts/python/compile-aiglass-examples.py
 
-      - name: Build all examples on ${{ runner.os }}
+      - name: Build all examples on Windows
         if: runner.os == 'Windows'
         shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
         run: |
@@ -104,7 +104,7 @@ jobs:
           rm -rf build
           mkdir build
 
-          python3 -u .github/scripts/python/compile-aiglass-examples.py
+          python3 -u ${{ env.SOURCE_ROOT }}/.github/scripts/python/compile-aiglass-examples.py
 
       - name: Build complete
         run: echo "Build finished."
@@ -125,20 +125,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          mkdir -p "${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/GCC-RELEASE/build/"
+          mkdir -p "${GITHUB_WORKSPACE}/rtos/project/realtek_amebapro2_v0_example/GCC-RELEASE/build/"
           cp -v /c/r/rtos/project/realtek_amebapro2_v0_example/GCC-RELEASE/build/*.bin \
-          "${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/GCC-RELEASE/build/" || true
+          "${GITHUB_WORKSPACE}/rtos/project/realtek_amebapro2_v0_example/GCC-RELEASE/build/" || true
 
       # Upload binary file to GitHub Artifacts
       - name: Upload binary file (${{ matrix.os }})
-        if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: aiglass-example-${{ matrix.os }}
-          path: project/realtek_amebapro2_v0_example/GCC-RELEASE/build/flash_ntz.bin
-          
-      - name: Upload binary file (${{ matrix.os }})
-        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: aiglass-example-${{ matrix.os }}

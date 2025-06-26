@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            echo "SOURCE_ROOT=C:/r/" >> $GITHUB_ENV
+            echo "SOURCE_ROOT=C:/r" >> $GITHUB_ENV
           else
             echo "SOURCE_ROOT=rtos" >> $GITHUB_ENV
           fi
@@ -103,11 +103,11 @@ jobs:
             examples=(${{ matrix.batch.examples }})
             for example in "${examples[@]}"; do
             echo "Building: $example"
-            python3 .github/scripts/python/compile-video-examples.py "$example" &
+            python3 ${{ env.SOURCE_ROOT }}/.github/scripts/python/compile-video-examples.py "$example" &
             done
             wait
 
-      - name: Build all examples in batch (${{ runner.os }})
+      - name: Build all examples in batch (Windows)
         if: runner.os == 'Windows'
         shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
         run: |
@@ -128,7 +128,7 @@ jobs:
 
           for example in ${{ matrix.batch.examples }}; do
             echo "Building: $example"
-            python3 -u .github/scripts/python/compile-video-examples.py $example
+            python3 -u ${{ env.SOURCE_ROOT }}/.github/scripts/python/compile-video-examples.py $example
           done
 
       - name: Build complete
@@ -139,20 +139,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          mkdir -p "${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/bin_outputs"
+          mkdir -p "${GITHUB_WORKSPACE}/rtos/project/realtek_amebapro2_v0_example/bin_outputs"
           cp -v /c/r/rtos/project/realtek_amebapro2_v0_example/bin_outputs/*.bin \
-          "${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/bin_outputs/" || true
+          "${GITHUB_WORKSPACE}/rtos/project/realtek_amebapro2_v0_example/bin_outputs/" || true
 
       # Upload binaries to GitHub Artifacts
       - name: Upload binaries (${{ matrix.os }})
-        if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
-          path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
-
-      - name: Upload binaries (${{ matrix.os }})
-        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
