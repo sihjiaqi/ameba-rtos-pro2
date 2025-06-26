@@ -83,7 +83,7 @@ jobs:
 
       - name: Build all examples on ${{ runner.os }}
         if: runner.os != 'Windows'
-        run: python3 .github/scripts/python/compile-aiglass-examples.py
+        run: python3 ${{ env.SOURCE_ROOT }}/.github/scripts/python/compile-aiglass-examples.py
 
       - name: Build all examples on ${{ runner.os }}
         if: runner.os == 'Windows'
@@ -119,6 +119,15 @@ jobs:
       #       component/soc/8735b/misc/platform/user_boot.c
       #       component/video/driver/RTL8735B/video_user_boot.c
       #       project/realtek_amebapro2_v0_example/inc/sensor.h
+      
+      # To access output binary outside msys shell
+      - name: Copy output binary to workspace
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p "${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/GCC-RELEASE/build/"
+          cp -v /c/r/rtos/project/realtek_amebapro2_v0_example/GCC-RELEASE/build/*.bin \
+          "${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/GCC-RELEASE/build/" || true
 
       # Upload binary file to GitHub Artifacts
       - name: Upload binary file (${{ matrix.os }})

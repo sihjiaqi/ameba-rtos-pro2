@@ -134,7 +134,7 @@ jobs:
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
 
-      # To access output bnaries outside msys shell
+      # To access output binaries outside msys shell
       - name: Copy output binaries to workspace
         if: runner.os == 'Windows'
         shell: bash
@@ -144,14 +144,14 @@ jobs:
           "${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/bin_outputs/" || true
 
       # Upload binaries to GitHub Artifacts
-      - name: Upload binaries ${{ matrix.os }}
+      - name: Upload binaries (${{ matrix.os }})
         if: runner.os != 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
           path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
 
-      - name: Upload binaries ${{ matrix.os }}
+      - name: Upload binaries (${{ matrix.os }})
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
