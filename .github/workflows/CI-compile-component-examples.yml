@@ -7,21 +7,21 @@ name: Build Component Examples
 on:
   push:
     branches:
-      - 'dev-component'
+      - 'dev-multi-os'
 
-  #   paths:
-  #     - '.github/workflows/CI-compile-component-examples.yml'
-  #     - '.github/scripts/python/compile-component-examples.py'
-  #     - '.github/scripts/python/bootstrap-linux-env.py'
-  #     - '.github/scripts/python/bootstrap-macos-env.py'
-  #     - 'component/example/**'
-  # pull_request:
-  #   paths:
-  #     - '.github/workflows/CI-compile-component-examples.yml'
-  #     - '.github/scripts/python/compile-component-examples.py'
-  #     - '.github/scripts/python/bootstrap-linux-env.py'
-  #     - '.github/scripts/python/bootstrap-macos-env.py'
-  #     - 'component/example/**'
+    paths:
+      - '.github/workflows/CI-compile-component-examples.yml'
+      - '.github/scripts/python/compile-component-examples.py'
+      - '.github/scripts/python/bootstrap-linux-env.py'
+      - '.github/scripts/python/bootstrap-macos-env.py'
+      - 'component/example/**'
+  pull_request:
+    paths:
+      - '.github/workflows/CI-compile-component-examples.yml'
+      - '.github/scripts/python/compile-component-examples.py'
+      - '.github/scripts/python/bootstrap-linux-env.py'
+      - '.github/scripts/python/bootstrap-macos-env.py'
+      - 'component/example/**'
 
   workflow_dispatch:
 
@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [windows-latest]
         # os: [ubuntu-latest, windows-latest, macos-latest]
         batch:
           - id: batch1
@@ -60,7 +60,11 @@ jobs:
       - name: Bootstrap MacOS Environment
         if: runner.os == 'macOS'
         run: python3 .github/scripts/python/bootstrap-macos-env.py
-    
+      
+      - name: Bootstrap Windows Environment
+        if: runner.os == 'Windows'
+        run: python3 .github/scripts/python/bootstrap-windows-env.py
+
       - name: Grant execute permission to all mp tools executable (Linux)
         if: runner.os == 'Linux'
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
@@ -68,6 +72,13 @@ jobs:
       - name: Grant execute permission to all mp tools executable (macOS)
         if: runner.os == 'macOS'
         run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
+
+      - name: Grant execute permission to all mp tools executable (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Get-ChildItem -Path "project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
+            icacls $_.FullName /grant Everyone:F
+          }
 
       - name: Run build script on ${{ runner.os }}
         if: runner.os != 'Windows'
@@ -78,7 +89,26 @@ jobs:
             python3 .github/scripts/python/compile-component-examples.py "$example" &
             done
             wait
-            
+
+      - name: Build all examples in batch (Windows)
+        if: runner.os == 'Windows'
+        shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
+        run: |
+          export MSYSTEM=MINGW64
+          export TOOLCHAIN_PATH="/c/Users/runneradmin/toolchain/asdk-10.3.0/mingw32/newlib/bin"
+          export CMAKE_PATH="/c/Program Files/CMake/bin"
+          export PATH="$TOOLCHAIN_PATH:$CMAKE_PATH:/c/Users/runneradmin/msys64_v10_3/msys64/mingw64/bin:/c/Users/runneradmin/msys64_v10_3/msys64/usr/bin:$PATH"
+
+          echo "Running in MSYS2"
+          echo "PATH=$PATH"
+          which cmake || echo "cmake not found"
+          cmake --version || echo "cmake version failed"
+
+          for example in ${{ matrix.batch.examples }}; do
+            echo "Building: $example"
+            python3 -u .github/scripts/python/compile-component-examples.py $example
+          done
+
       - name: Build complete
         run: echo "Build finished."
     
