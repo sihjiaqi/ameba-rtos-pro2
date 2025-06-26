@@ -53,7 +53,6 @@ SRC_DIR = os.path.join(PROJECT_DIR, "src", "mmfv2_video_example")
 GCC_RELEASE_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE")
 BUILD_DIR = os.path.join(GCC_RELEASE_DIR, "build")
 BIN_OUTPUT_DIR = os.path.join(PROJECT_DIR, "bin_outputs")
-TOOLCHAIN_FILE = os.path.join(GCC_RELEASE_DIR, "toolchain.cmake")
 SRC_FILE = os.path.join(SRC_DIR, "video_example_media_framework.c")
 
 def run(cmd, cwd=None):
