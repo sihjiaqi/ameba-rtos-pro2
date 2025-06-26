@@ -144,7 +144,15 @@ jobs:
           "${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/bin_outputs/" || true
 
       # Upload binaries to GitHub Artifacts
-      - name: Upload binaries
+      - name: Upload binaries ${{ matrix.os }}
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
+          path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
+
+      - name: Upload binaries ${{ matrix.os }}
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
