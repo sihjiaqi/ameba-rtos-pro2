@@ -31,18 +31,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [windows-latest]
+        # os: [ubuntu-latest, macos-latest, windows-latest]
         batch:
           - id: batch1
             examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init mmf2_video_example_v3_init"
-          - id: batch2
-            examples: "mmf2_video_example_av_rtsp_mp4_init mmf2_video_example_joint_test_init mmf2_video_example_joint_test_rtsp_mp4_init mmf2_video_example_2way_audio_pcmu_doorbell_init mmf2_video_example_2way_audio_pcmu_init mmf2_video_example_array_rtsp_init mmf2_video_example_v1_param_change_init mmf2_video_example_v1_day_night_change_init mmf2_video_example_v1_mask_init"
-          - id: batch3
-            examples: "mmf2_video_example_v1_rate_control_init mmf2_video_example_av_mp4_httpfs_init mmf2_video_example_vipnn_rtsp_init mmf2_video_example_face_rtsp_init mmf2_video_example_fd_lm_mfn_sim_rtsp_init mmf2_video_example_joint_test_all_nn_rtsp_init mmf2_video_example_demuxer_rtsp_init mmf2_video_example_h264_pcmu_array_mp4_init mmf2_video_example_audio_vipnn_init"
-          - id: batch4
-            examples: "mmf2_video_example_md_rtsp_init mmf2_video_example_md_mp4_init mmf2_video_example_bayercap_rtsp_init mmf2_video_example_md_nn_rtsp_init mmf2_video_example_joint_test_rtsp_mp4_init_fcs mmf2_video_example_vipnn_facedet_init mmf2_video_example_jpeg_external_init mmf2_video_example_vipnn_facedet_sync_init mmf2_video_example_vipnn_facedet_sync_snapshot_init"
-          - id: batch5
-            examples: "mmf2_video_example_vipnn_handgesture_init mmf2_video_example_joint_test_vipnn_rtsp_mp4_init mmf2_video_example_vipnn_classify_rtsp_init mmf2_video_example_timelapse_mp4_init"
+          # - id: batch2
+          #   examples: "mmf2_video_example_av_rtsp_mp4_init mmf2_video_example_joint_test_init mmf2_video_example_joint_test_rtsp_mp4_init mmf2_video_example_2way_audio_pcmu_doorbell_init mmf2_video_example_2way_audio_pcmu_init mmf2_video_example_array_rtsp_init mmf2_video_example_v1_param_change_init mmf2_video_example_v1_day_night_change_init mmf2_video_example_v1_mask_init"
+          # - id: batch3
+          #   examples: "mmf2_video_example_v1_rate_control_init mmf2_video_example_av_mp4_httpfs_init mmf2_video_example_vipnn_rtsp_init mmf2_video_example_face_rtsp_init mmf2_video_example_fd_lm_mfn_sim_rtsp_init mmf2_video_example_joint_test_all_nn_rtsp_init mmf2_video_example_demuxer_rtsp_init mmf2_video_example_h264_pcmu_array_mp4_init mmf2_video_example_audio_vipnn_init"
+          # - id: batch4
+          #   examples: "mmf2_video_example_md_rtsp_init mmf2_video_example_md_mp4_init mmf2_video_example_bayercap_rtsp_init mmf2_video_example_md_nn_rtsp_init mmf2_video_example_joint_test_rtsp_mp4_init_fcs mmf2_video_example_vipnn_facedet_init mmf2_video_example_jpeg_external_init mmf2_video_example_vipnn_facedet_sync_init mmf2_video_example_vipnn_facedet_sync_snapshot_init"
+          # - id: batch5
+          #   examples: "mmf2_video_example_vipnn_handgesture_init mmf2_video_example_joint_test_vipnn_rtsp_mp4_init mmf2_video_example_vipnn_classify_rtsp_init mmf2_video_example_timelapse_mp4_init"
 
     steps:
       # Checkout the repository into a shorter subdirectory to control 
@@ -65,7 +66,7 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            echo "SOURCE_ROOT=C:/r/rtos" >> $GITHUB_ENV
+            echo "SOURCE_ROOT=C:/r/" >> $GITHUB_ENV
           else
             echo "SOURCE_ROOT=rtos" >> $GITHUB_ENV
           fi
@@ -80,7 +81,7 @@ jobs:
 
       - name: Bootstrap Windows Environment
         if: runner.os == 'Windows'
-        run: python3 ${{ env.SOURCE_ROOT }}\.github\scripts\python\bootstrap-windows-env.py
+        run: python3 ${{ env.SOURCE_ROOT }}/.github/scripts/python/bootstrap-windows-env.py
 
       - name: Grant execute permission (Linux)
         if: runner.os == 'Linux'
@@ -133,13 +134,6 @@ jobs:
 
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
-
-      # - name: List binaries from MSYS2
-      #   if: runner.os == 'Windows'
-      #   shell: C:\Users\runneradmin\msys64_v10_3\msys64\usr\bin\bash.exe -l {0}
-      #   run: |
-      #     echo "Listing built .bin files:"
-      #     ls -lh /c/r/project/realtek_amebapro2_v0_example/bin_outputs || true
 
       - name: Copy output binaries to workspace
         if: runner.os == 'Windows'
