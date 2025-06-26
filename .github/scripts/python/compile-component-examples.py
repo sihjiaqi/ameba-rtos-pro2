@@ -7,11 +7,10 @@ PROJECT_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."
 GCC_RELEASE_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE")
 BUILD_DIR = os.path.join(GCC_RELEASE_DIR, "build")
 BIN_OUTPUT_DIR = os.path.join(PROJECT_DIR, "bin_outputs")
-TOOLCHAIN_FILE = os.path.join(GCC_RELEASE_DIR, "toolchain.cmake")
 
-def run(cmd):
+def run(cmd, cwd=None):
     print(f"Running: {cmd}")
-    result = subprocess.run(cmd, shell=True, text=True, capture_output=True, check=True)
+    result = subprocess.run(cmd, shell=True, text=True, capture_output=True, check=True, cwd=cwd)
     print(result.stdout)
     if result.stderr:
         print(result.stderr, file=sys.stderr)
@@ -24,10 +23,10 @@ def build_example(example):
     os.chdir(build_dir)
 
     # Run cmake config
-    run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE} -DEXAMPLE={example}')
+    run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="../toolchain.cmake" -DEXAMPLE={example}', cwd=build_dir)
 
     # Build target
-    run('cmake --build . --target flash -j4')
+    run('cmake --build . --target flash -j4', cwd=build_dir)
     
     # Copy built binary file to output directory
     built_bin_name = "flash_ntz.bin"
@@ -37,7 +36,7 @@ def build_example(example):
     shutil.copyfile(built_bin_path, output_bin_path)
     
     # Clean for next build
-    run('make clean')
+    run('make clean', cwd=build_dir)
     os.chdir("..")
 
 def main():
