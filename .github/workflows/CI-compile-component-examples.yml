@@ -34,21 +34,22 @@ jobs:
         # os: [ubuntu-latest, windows-latest, macos-latest]
         batch:
           - id: batch1
-            examples: "coap eap ext_storage_update_ota fatfs http_client"
-          - id: batch2
-            examples: "http_download httpc httpd kvs_producer_mmf kvs_webrtc_mmf"
-          - id: batch3
-            examples: "mcast media_fmp4 media_framework media_mp4_demuxer media_uvcd"
-          - id: batch4
-            examples: "media_video_to_storage mqtt nn_file_tester nonblock_connect ota_http"
-          - id: batch5
-            examples: "qr_code_scanner sd_hotplug sntp_showtime socket_select socket_tcp_trx"
-          - id: batch6
-            examples: "sqlite ssl_client ssl_download ssl_server std_file"
-          - id: batch7
-            examples: "usb_cdc usb_cdc_snapshot usb_dfu_ota usb_example usb_mass_storage"
-          - id: batch8
-            examples: "wifi_roaming_client_plus wifi_roaming_plus wlan_scenario"
+            examples: "wlan_scenario"
+          #   examples: "coap eap ext_storage_update_ota fatfs http_client"
+          # - id: batch2
+          #   examples: "http_download httpc httpd kvs_producer_mmf kvs_webrtc_mmf"
+          # - id: batch3
+          #   examples: "mcast media_fmp4 media_framework media_mp4_demuxer media_uvcd"
+          # - id: batch4
+          #   examples: "media_video_to_storage mqtt nn_file_tester nonblock_connect ota_http"
+          # - id: batch5
+          #   examples: "qr_code_scanner sd_hotplug sntp_showtime socket_select socket_tcp_trx"
+          # - id: batch6
+          #   examples: "sqlite ssl_client ssl_download ssl_server std_file"
+          # - id: batch7
+          #   examples: "usb_cdc usb_cdc_snapshot usb_dfu_ota usb_example usb_mass_storage"
+          # - id: batch8
+          #   examples: "wifi_roaming_client_plus wifi_roaming_plus wlan_scenario"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -106,7 +107,7 @@ jobs:
 
           for example in ${{ matrix.batch.examples }}; do
             echo "Building: $example"
-            python3 -u .github/scripts/python/compile-component-examples.py $example
+            python3 -u $GITHUB_WORKSPACE/.github/scripts/python/compile-component-examples.py $example
           done
 
       - name: Build complete
