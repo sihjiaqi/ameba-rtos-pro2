@@ -5,14 +5,15 @@
 name: Build AI Glass Examples
 
 on:
-  push:
-    branches:
-      - 'dev-multi-os'
+  # push:
+  #   branches:
+  #     - 'main'
   #   paths:
   #     - '.github/workflows/CI-compile-aiglass-examples.yml'
   #     - '.github/scripts/python/compile-aiglass-examples.py'
   #     - '.github/scripts/python/bootstrap-linux-env.py'
   #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - '.github/scripts/python/bootstrap-windows-env.py'
   #     - 'project/realtek_amebapro2_v0_example/scenario/ai_glass/**'
   # pull_request:
   #   paths:
@@ -20,6 +21,7 @@ on:
   #     - '.github/scripts/python/compile-aiglass-examples.py'
   #     - '.github/scripts/python/bootstrap-linux-env.py'
   #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - '.github/scripts/python/bootstrap-windows-env.py'
   #     - 'project/realtek_amebapro2_v0_example/scenario/ai_glass/**'
   
   workflow_dispatch:

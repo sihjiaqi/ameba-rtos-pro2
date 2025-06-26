@@ -5,24 +5,24 @@
 name: Build Video/NN Examples
 
 on:
-  push:
-    branches:
-      - 'dev-multi-os'
-    paths:
-    - '.github/workflows/CI-compile-video-examples.yml'
-    - '.github/scripts/python/compile-video-examples.py'
-    - '.github/scripts/python/bootstrap-linux-env.py'
-    - '.github/scripts/python/bootstrap-macos-env.py'
-    - '.github/scripts/python/bootstrap-windows-env.py'
-    - 'project/realtek_amebapro2_v0_example/src/mmfv2_video_example/**'
-  pull_request:
-    paths:
-      - '.github/workflows/CI-compile-video-examples.yml'
-      - '.github/scripts/python/compile-video-examples.py'
-      - '.github/scripts/python/bootstrap-linux-env.py'
-      - '.github/scripts/python/bootstrap-macos-env.py'
-      - '.github/scripts/python/bootstrap-windows-env.py'
-      - 'project/realtek_amebapro2_v0_example/src/mmfv2_video_example/**'
+  # push:
+  #   branches:
+  #     - 'main'
+  #   paths:
+  #   - '.github/workflows/CI-compile-video-examples.yml'
+  #   - '.github/scripts/python/compile-video-examples.py'
+  #   - '.github/scripts/python/bootstrap-linux-env.py'
+  #   - '.github/scripts/python/bootstrap-macos-env.py'
+  #   - '.github/scripts/python/bootstrap-windows-env.py'
+  #   - 'project/realtek_amebapro2_v0_example/src/mmfv2_video_example/**'
+  # pull_request:
+  #   paths:
+  #     - '.github/workflows/CI-compile-video-examples.yml'
+  #     - '.github/scripts/python/compile-video-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - '.github/scripts/python/bootstrap-windows-env.py'
+  #     - 'project/realtek_amebapro2_v0_example/src/mmfv2_video_example/**'
 
   workflow_dispatch:
 
