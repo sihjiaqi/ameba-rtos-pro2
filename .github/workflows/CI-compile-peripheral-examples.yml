@@ -1,0 +1,70 @@
+name: Build Peripheral Examples
+on:
+  push:
+    branches:
+      - 'dev-peripheral'
+  workflow_dispatch:
+jobs:
+  build-peripheral-examples:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+
+        # Define examples in batches to run them in parallel
+        batch:
+          - id: batch1
+            examples: "analogin flash flash_setstatus gdma gpio "
+          - id: batch2
+            examples: "gpio_irq gpio_level_irq gpio_light_weight gpio_pulse_measure gtimer"
+          - id: batch3
+            examples: "gtimer_rtc i2c i2s pm_deepsleep pm_retention"
+          - id: batch4
+            examples: "pwm rtc sgpio_capture_rxdata sgpio_multc_counter_mode sgpio_sampling_rxdata"
+          - id: batch5
+            examples: "sgpio_capture_spi spi_master_write_read_one_byte spi_stream_dma_twoboard spi_stream_twoboard_concurrent spi_twoboard"
+          - id: batch6
+            examples: "timer_systick trng uart uart_auto_flow_ctrl uart_irq"
+          - id: batch7
+            examples: "uart_stream_2_threads uart_stream_4_threads uart_stream_dma uart_stream_dma_rx_timeout uart_stream_irq uart_stream_rx_timeout watchdog"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Bootstrap Linux Environment
+        if: runner.os == 'Linux'
+        run: python3 .github/scripts/python/bootstrap-linux-env.py
+
+      - name: Bootstrap MacOS Environment
+        if: runner.os == 'macOS'
+        run: python3 .github/scripts/python/bootstrap-macos-env.py
+
+      - name: Bootstrap Windows Environment
+        if: runner.os == 'Windows'
+        run: python3 .github/scripts/python/bootstrap-windows-env.py
+        
+      - name: Grant execute permission to all mp tools executable (Linux)
+        if: runner.os == 'Linux'
+        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.linux || true
+      
+      - name: Grant execute permission to all mp tools executable (macOS)
+        if: runner.os == 'macOS'
+        run: chmod +x project/realtek_amebapro2_v0_example/GCC-RELEASE/mp/*.darwin || true
+
+      - name: Run build script on ${{ runner.os }}
+        if: runner.os != 'Windows'
+        run: |
+            examples=(${{ matrix.batch.examples }})
+            for example in "${examples[@]}"; do
+            echo "Launching build for $example"
+            python3 .github/scripts/python/compile-peripheral-examples.py "$example" &
+            done
+            wait
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+            name: peripheral-examples-${{ matrix.os }}-${{ matrix.batch.id }}
+            path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
+          
