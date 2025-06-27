@@ -14,20 +14,28 @@ jobs:
 
         # Define examples in batches to run them in parallel
         batch:
+          # - id: batch1
+          #   examples: "analogin flash flash_setstatus gdma gpio "
+          # - id: batch2
+          #   examples: "gpio_irq gpio_level_irq gpio_light_weight gpio_pulse_measure gtimer"
+          # - id: batch3
+          #   examples: "gtimer_rtc i2c i2s pm_deepsleep pm_retention"
+          # - id: batch4
+          #   examples: "pwm rtc sgpio_capture_rxdata sgpio_multc_counter_mode sgpio_sampling_rxdata"
+          # - id: batch5
+          #   examples: "sgpio_capture_spi spi_master_write_read_one_byte spi_stream_dma_twoboard spi_stream_twoboard_concurrent spi_twoboard"
           - id: batch1
-            examples: "analogin flash flash_setstatus gdma gpio "
+            examples: "timer_systick"
           - id: batch2
-            examples: "gpio_irq gpio_level_irq gpio_light_weight gpio_pulse_measure gtimer"
+            examples: "trng"
           - id: batch3
-            examples: "gtimer_rtc i2c i2s pm_deepsleep pm_retention"
+            examples: "uart"
           - id: batch4
-            examples: "pwm rtc sgpio_capture_rxdata sgpio_multc_counter_mode sgpio_sampling_rxdata"
-          - id: batch5
-            examples: "sgpio_capture_spi spi_master_write_read_one_byte spi_stream_dma_twoboard spi_stream_twoboard_concurrent spi_twoboard"
-          - id: batch6
-            examples: "timer_systick trng uart uart_auto_flow_ctrl uart_irq"
-          - id: batch7
-            examples: "uart_stream_2_threads uart_stream_4_threads uart_stream_dma uart_stream_dma_rx_timeout uart_stream_irq uart_stream_rx_timeout watchdog"
+            examples: "uart_auto_flow_ctrl"
+          - id: batch4
+            examples: "uart_irq"
+          # - id: batch7
+          #   examples: "uart_stream_2_threads uart_stream_4_threads uart_stream_dma uart_stream_dma_rx_timeout uart_stream_irq uart_stream_rx_timeout watchdog"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
