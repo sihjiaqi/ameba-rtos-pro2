@@ -8,7 +8,6 @@ GCC_RELEASE_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE")
 SRC_MAIN_C = os.path.join(PROJECT_DIR, "src", "main.c")
 EXAMPLE_SOURCES_DIR = os.path.join(PROJECT_DIR, "example_sources")
 BIN_OUTPUT_DIR = os.path.join(PROJECT_DIR, "bin_outputs")
-TOOLCHAIN_FILE = os.path.join(GCC_RELEASE_DIR, "toolchain.cmake")
 
 def run(cmd):
     print(f"Running: {cmd}")
@@ -32,7 +31,7 @@ def build_example(example):
     os.makedirs(build_dir, exist_ok=True)
     os.chdir(build_dir)
 
-    run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE}')
+    run(f'cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake')
     run('cmake --build . --target flash -j4')
 
     built_bin_path = os.path.join(build_dir, "flash_ntz.bin")
