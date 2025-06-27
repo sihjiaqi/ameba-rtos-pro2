@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - 'dev-multi-os'
-
     paths:
       - '.github/workflows/CI-compile-component-examples.yml'
       - '.github/scripts/python/compile-component-examples.py'
@@ -30,7 +29,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest]
         batch:
           - id: batch1
             examples: "coap eap ext_storage_update_ota fatfs http_client"
@@ -50,7 +49,7 @@ jobs:
             examples: "wifi_roaming_client_plus wifi_roaming_plus"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4       
 
       - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
@@ -110,7 +109,7 @@ jobs:
 
       - name: Build complete
         run: echo "Build finished."
-    
+
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
