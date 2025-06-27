@@ -32,7 +32,7 @@ jobs:
             examples: "uart"
           - id: batch4
             examples: "uart_auto_flow_ctrl"
-          - id: batch4
+          - id: batch5
             examples: "uart_irq"
           # - id: batch7
           #   examples: "uart_stream_2_threads uart_stream_4_threads uart_stream_dma uart_stream_dma_rx_timeout uart_stream_irq uart_stream_rx_timeout watchdog"
