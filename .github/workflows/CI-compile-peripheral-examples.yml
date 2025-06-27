@@ -19,7 +19,7 @@ jobs:
           - id: batch2
             examples: "gpio_irq gpio_level_irq gpio_light_weight gpio_pulse_measure gtimer"
           - id: batch3
-            examples: "gtimer_tc i2c i2s pm_deepsleep pm_retention"
+            examples: "gtimer_rtc i2c i2s pm_deepsleep pm_retention"
           - id: batch4
             examples: "pwm rtc sgpio_capture_rxdata sgpio_multc_counter_mode sgpio_sampling_rxdata"
           - id: batch5
