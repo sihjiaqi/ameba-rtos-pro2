@@ -29,27 +29,29 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         batch:
           - id: batch1
             examples: "coap eap ext_storage_update_ota fatfs http_client"
           - id: batch2
-            examples: "http_download httpc httpd kvs_producer_mmf kvs_webrtc_mmf"
+            examples: "http_download httpc httpd mcast media_fmp4 media_framework"
           - id: batch3
-            examples: "mcast media_fmp4 media_framework media_mp4_demuxer media_uvcd"
+            examples: "media_mp4_demuxer media_uvcd media_video_to_storage mqtt nn_file_tester"
           - id: batch4
-            examples: "media_video_to_storage mqtt nn_file_tester nonblock_connect ota_http"
+            examples: "nonblock_connect ota_http qr_code_scanner sd_hotplug sntp_showtime"
           - id: batch5
-            examples: "qr_code_scanner sd_hotplug sntp_showtime socket_select socket_tcp_trx"
+            examples: "socket_select socket_tcp_trx sqlite ssl_client ssl_download"
           - id: batch6
-            examples: "sqlite ssl_client ssl_download ssl_server std_file"
+            examples: "ssl_server std_file usb_cdc usb_cdc_snapshot usb_dfu_ota"
           - id: batch7
-            examples: "usb_cdc usb_cdc_snapshot usb_dfu_ota usb_example usb_mass_storage"
-          - id: batch8
-            examples: "wifi_roaming_client_plus wifi_roaming_plus"
+            examples: "usb_example usb_mass_storage wifi_roaming_client_plus wifi_roaming_plus"
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4       
+        uses: actions/checkout@v4  
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
