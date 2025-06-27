@@ -49,7 +49,9 @@ jobs:
             examples: "wifi_roaming_client_plus wifi_roaming_plus"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4       
+        uses: actions/checkout@v4  
+        with:
+          submodules: recursive     
 
       - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
