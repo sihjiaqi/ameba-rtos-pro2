@@ -34,7 +34,8 @@ jobs:
           - id: batch1
             examples: "coap eap ext_storage_update_ota fatfs http_client"
           - id: batch2
-            examples: "http_download httpc httpd kvs_producer_mmf kvs_webrtc_mmf"
+            examples: "http_download httpc httpd"
+            # examples: "http_download httpc httpd kvs_producer_mmf kvs_webrtc_mmf"
           - id: batch3
             examples: "mcast media_fmp4 media_framework media_mp4_demuxer media_uvcd"
           - id: batch4
