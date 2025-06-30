@@ -51,7 +51,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4  
         with:
-          submodules: recursive     
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
