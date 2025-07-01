@@ -26,6 +26,7 @@ def main():
     try:
         download_and_extract_toolchain()
         append_to_github_path()
+        print(f"Bootstrap completed successfully.")
     except Exception as e:
         print(f"An error occurred: {e}")
         exit(1)

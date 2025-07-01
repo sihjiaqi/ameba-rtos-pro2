@@ -1,16 +1,20 @@
+# This workflow is to build peripheral examples and upload the binary files as artifacts.
+# It is triggered on push or pull request events for specific paths related to peripheral examples.
+# It also allows manual triggering via workflow_dispatch.
+
 name: Build Peripheral Examples
 
 on:
-  push:
-    branches:
-      - 'dev-multi-os'
-    paths:
-    - '.github/workflows/CI-compile-peripheral-examples.yml'
-    - '.github/scripts/python/compile-peripheral-examples.py'
-    - '.github/scripts/python/bootstrap-linux-env.py'
-    - '.github/scripts/python/bootstrap-macos-env.py'
-    - '.github/scripts/python/bootstrap-windows-env.py'
-    - 'project/realtek_amebapro2_v0_example/example_sources/**'
+  # push:
+  #   branches:
+  #     - 'main'
+  #   paths:
+  #   - '.github/workflows/CI-compile-peripheral-examples.yml'
+  #   - '.github/scripts/python/compile-peripheral-examples.py'
+  #   - '.github/scripts/python/bootstrap-linux-env.py'
+  #   - '.github/scripts/python/bootstrap-macos-env.py'
+  #   - '.github/scripts/python/bootstrap-windows-env.py'
+  #   - 'project/realtek_amebapro2_v0_example/example_sources/**'
   # pull_request:
   #   paths:
   #     - '.github/workflows/CI-compile-peripheral-examples.yml'

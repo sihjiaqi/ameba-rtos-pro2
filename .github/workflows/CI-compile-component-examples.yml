@@ -5,22 +5,22 @@
 name: Build Component Examples
 
 on:
-  push:
-    branches:
-      - 'dev-multi-os'
-    paths:
-      - '.github/workflows/CI-compile-component-examples.yml'
-      - '.github/scripts/python/compile-component-examples.py'
-      - '.github/scripts/python/bootstrap-linux-env.py'
-      - '.github/scripts/python/bootstrap-macos-env.py'
-      - 'component/example/**'
-  pull_request:
-    paths:
-      - '.github/workflows/CI-compile-component-examples.yml'
-      - '.github/scripts/python/compile-component-examples.py'
-      - '.github/scripts/python/bootstrap-linux-env.py'
-      - '.github/scripts/python/bootstrap-macos-env.py'
-      - 'component/example/**'
+  # push:
+  #   branches:
+  #     - 'main'
+  #   paths:
+  #     - '.github/workflows/CI-compile-component-examples.yml'
+  #     - '.github/scripts/python/compile-component-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - 'component/example/**'
+  # pull_request:
+  #   paths:
+  #     - '.github/workflows/CI-compile-component-examples.yml'
+  #     - '.github/scripts/python/compile-component-examples.py'
+  #     - '.github/scripts/python/bootstrap-linux-env.py'
+  #     - '.github/scripts/python/bootstrap-macos-env.py'
+  #     - 'component/example/**'
 
   workflow_dispatch:
 
