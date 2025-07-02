@@ -5,9 +5,9 @@
 name: Build Video/NN Examples
 
 on:
-  # push:
-  #   branches:
-  #     - 'main'
+  push:
+    branches:
+      - 'dev-jenkins'
   #   paths:
   #   - '.github/workflows/CI-compile-video-examples.yml'
   #   - '.github/scripts/python/compile-video-examples.py'
@@ -149,3 +149,16 @@ jobs:
         with:
           name: video-example-${{ matrix.os }}-${{ matrix.batch.id }}
           path: ${{ env.SOURCE_ROOT }}/project/realtek_amebapro2_v0_example/bin_outputs/*.bin
+
+      # Run jenkinsfile to flash firware on hardware
+      - name: Trigger Jenkins Job
+        env:
+          JENKINS_USER: ${{ secrets.JENKINS_USER }}
+          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+        run: |
+          RUN_ID=${{ github.run_id }}
+          echo "Run ID: $RUN_ID"
+
+          curl -X POST "https://e50d-128-106-168-7.ngrok-free.app/job/test-agent-job/buildWithParameters" \
+            --user "$JENKINS_USER:$JENKINS_TOKEN" \
+            --data-urlencode "RUN_ID=$RUN_ID"
