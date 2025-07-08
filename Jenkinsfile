@@ -13,6 +13,13 @@ pipeline {
   }
 
   stages {
+    stage('Test Token') {
+        steps {
+            echo "Length of token: ${GITHUB_TOKEN.length()}"
+        }
+      }
+    }
+
     stage('Get Firmware from GitHub Artifacts') {
         steps {
             script {
