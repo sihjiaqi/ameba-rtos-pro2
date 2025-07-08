@@ -1,5 +1,4 @@
 pipeline {
-//   agent any
   agent { label 'windows-agent' }
 
   parameters {
@@ -14,48 +13,55 @@ pipeline {
 
   stages {
     stage('Test Token') {
-        steps {
+      steps {
+        script {
+          if (GITHUB_TOKEN) {
             echo "Length of token: ${GITHUB_TOKEN.length()}"
+          } else {
+            echo "GITHUB_TOKEN is not defined!"
+          }
         }
       }
     }
 
     stage('Get Firmware from GitHub Artifacts') {
-        steps {
-            script {
-                echo "Getting artifacts for run ID: ${params.RUN_ID}"
+      steps {
+        script {
+          echo "Getting artifacts for run ID: ${params.RUN_ID}"
 
-                def artifactsJson = bat (
-                    script: """
-                    curl -s -H "Authorization: token ${GITHUB_TOKEN}" ^
-                    https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/runs/${params.RUN_ID}/artifacts
-                    """,
-                    returnStdout: true
-                ).trim()
+          bat """
+          curl -s -H "Authorization: token ${GITHUB_TOKEN}" ^
+          https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/runs/${params.RUN_ID}/artifacts ^
+          > artifacts.json
+          """
 
-                def parsed = readJSON text: artifactsJson
-                def artifacts = parsed.artifacts
+          def artifactsJson = readFile('artifacts.json').trim()
+          echo "Artifacts JSON: ${artifactsJson}"
 
-                for (artifact in artifacts) {
-                    echo "Downloading artifact: ${artifact.name} (ID: ${artifact.id})"
-                    try {
-                        bat """
-                        mkdir -p artifact_files/${artifact.name}
-                        curl -L -H "Authorization: token ${GITHUB_TOKEN}" ^
-                            -o ${artifact.name}.zip ^
-                            https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/artifacts/${artifact.id}/zip
+          def parsed = readJSON text: artifactsJson
+          def artifacts = parsed.artifacts
 
-                        unzip -o ${artifact.name}.zip -d artifact_files/${artifact.name}
-                        rm ${artifact.name}.zip
-                        """
-                    } catch (err) {
-                        echo "Failed to download artifact ${artifact.name}: ${err}"
-                    }
-                }
+          for (artifact in artifacts) {
+            echo "Downloading artifact: ${artifact.name} (ID: ${artifact.id})"
+            try {
+              bat """
+              mkdir artifact_files\\${artifact.name}
+
+              curl -L -H "Authorization: token ${GITHUB_TOKEN}" ^
+                -o ${artifact.name}.zip ^
+                https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/artifacts/${artifact.id}/zip
+
+              powershell -Command "Expand-Archive -Path '${artifact.name}.zip' -DestinationPath 'artifact_files/${artifact.name}' -Force"
+
+              del ${artifact.name}.zip
+              """
+            } catch (err) {
+              echo "Failed to download artifact ${artifact.name}: ${err}"
             }
+          }
         }
+      }
     }
-
 
     // stage('Run Hardware Test') {
     //   steps {

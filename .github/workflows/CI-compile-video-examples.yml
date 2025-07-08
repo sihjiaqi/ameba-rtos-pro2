@@ -36,8 +36,8 @@ jobs:
         batch:
           - id: batch1
             examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init"
-          # - id: batch2
-          #   examples: "mmf2_video_example_av_rtsp_mp4_init mmf2_video_example_joint_test_init"
+          - id: batch2
+            examples: "mmf2_video_example_av_rtsp_mp4_init mmf2_video_example_joint_test_init"
           # - id: batch1
           #   examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init mmf2_video_example_v3_init"
           # - id: batch2
