@@ -164,15 +164,16 @@ jobs:
           set -x  # Echo each line
           RUN_ID=${{ github.run_id }}
           echo "Run ID: $RUN_ID"
-
+          
           # Request and save cookie from jenkins server
           curl -c cookies.txt --user "$JENKINS_USER:$JENKINS_TOKEN" "${{ secrets.JENKINS_URL }}/crumbIssuer/api/json" > crumb.json
-
+          
           CRUMB=$(jq -r .crumb crumb.json)
           CRUMB_FIELD=$(jq -r .crumbRequestField crumb.json)
+
           echo "CRUMB: $CRUMB"
           echo "CRUMB_FIELD: $CRUMB_FIELD"
-
+          
           # Trigger job using same cookie
           # Without -b cookies.txt, jenkins think you are a new client with no session cookie, crumb does not match the session, 403 forbidden
           curl -b cookies.txt -v -X POST "${{ secrets.JENKINS_URL }}/job/test-pipeline-job/buildWithParameters" \
