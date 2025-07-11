@@ -51,12 +51,10 @@ pipeline {
                 bat """
                 mkdir artifact_files\\${artifact.name}
 
-                # Download artifact
                 curl -L -H "Authorization: token ${GITHUB_TOKEN}" ^
                   -o ${artifact.name}.zip ^
                   https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/artifacts/${artifact.id}/zip
                   
-                # Unzip the downloaded artifact
                 powershell -Command "Expand-Archive -Path '${artifact.name}.zip' -DestinationPath 'artifact_files/${artifact.name}' -Force"
                 del ${artifact.name}.zip
                 """
@@ -73,35 +71,79 @@ pipeline {
     stage('Prepare Arduino Tools') {
       steps {
         script {
-          def toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_linux"
-          def imageToolFolder = "${toolsFolder}/image_tool"
-          def imageLinuxFile = "${toolsFolder}/image_linux"
+          def toolsFolder = "${env.WORKSPACE}\\unzipped_artifacts\\ameba_pro2_tools_linux"
+          def imageToolFolder = "${toolsFolder}\\image_tool"
+          def imageLinuxFile = "${toolsFolder}\\image_linux"
 
           // Check if folder and file exist
           def imageToolExists = fileExists(imageToolFolder)
           def imageLinuxExists = fileExists(imageLinuxFile)
 
           if (!imageToolExists || !imageLinuxExists) {
-            echo "Required Arduino tools missing, cloning repo and copying files..."
+            echo "Required Arduino tools missing, downloading dev branch ZIP..."
 
-            // Clone repo
-            sh 'rm -rf ameba-arduino-pro2'
-            sh 'git clone https://github.com/Ameba-AIoT/ameba-arduino-pro2.git'
+            // Download entire dev branch ZIP and extract
+            bat '''
+              curl -L -o dev.zip https://github.com/Ameba-AIoT/ameba-arduino-pro2/archive/refs/heads/dev.zip
+              tar -xf dev.zip
+            '''
 
-            // Create target folders if missing
-            sh "mkdir -p ${imageToolFolder}"
+            def source = "ameba-arduino-pro2-dev\\Arduino_package\\ameba_pro2_tools_linux"
+            def target = toolsFolder
 
-            // Copy folder and file to unzipped_artifacts folder
-            sh """
-            cp -r ameba-arduino-pro2/Arduino_package/ameba_pro2_tools_linux/image_tool/* ${imageToolFolder}/
-            cp ameba-arduino-pro2/Arduino_package/ameba_pro2_tools_linux/image_linux ${toolsFolder}/
+            // Create target folder if missing
+            bat "mkdir ${target}"
+
+            // Copy only the tools folder content
+            powershell """
+              Copy-Item -Recurse -Force '${source}\\*' '${target}\\'
             """
+
+            echo "Arduino tools copied to ${target}"
+
           } else {
-            echo "Arduino tools already present, skipping clone."
+            echo "Arduino tools already present, skipping download."
           }
         }
       }
     }
+
+    // stage('Prepare Arduino Tools') {
+    //   steps {
+    //     script {
+    //       def toolsFolder = "${env.WORKSPACE}\\unzipped_artifacts\\ameba_pro2_tools_linux"
+    //       def imageToolFolder = "${toolsFolder}\\image_tool"
+    //       def imageLinuxFile = "${toolsFolder}\\image_linux"
+
+    //       // Check if folder and file exist
+    //       def imageToolExists = fileExists(imageToolFolder)
+    //       def imageLinuxExists = fileExists(imageLinuxFile)
+
+    //       if (!imageToolExists || !imageLinuxExists) {
+    //         echo "Required Arduino tools missing, cloning repo and copying files..."
+
+    //         // Clone repo
+    //         bat 'rmdir /S /Q ameba-arduino-pro2 || echo "No folder to delete"'
+    //         bat '''
+    //         where git
+    //         git --version
+    //         git clone https://github.com/Ameba-AIoT/ameba-arduino-pro2.git
+    //         '''
+
+    //         // Create target folders
+    //         bat "mkdir ${imageToolFolder}"
+
+    //         // Copy folder and file to unzipped_artifacts folder
+    //         powershell """
+    //           Copy-Item -Recurse -Force ameba-arduino-pro2/Arduino_package/ameba_pro2_tools_linux/image_tool/* '${imageToolFolder}\\'
+    //           Copy-Item -Force ameba-arduino-pro2/Arduino_package/ameba_pro2_tools_linux/image_linux '${toolsFolder}\\'
+    //         """
+    //       } else {
+    //         echo "Arduino tools already present, skipping clone."
+    //       }
+    //     }
+    //   }
+    // }
 
     stage('Flash to Hardware') {
       when {
@@ -141,11 +183,10 @@ pipeline {
           }
         }
       }
-    }
-
-    post {
-      always {
-      echo "Job done for batch ${params.BATCH_ID}"
+      post {
+        always {
+        echo "Job done for batch ${params.BATCH_ID}"
+        }
       }
     }
   }
