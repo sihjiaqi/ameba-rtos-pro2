@@ -48,6 +48,7 @@ EXAMPLES = [
 ]
 
 print(os.path.abspath(__file__))
+
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", "..", "..", "..", "project", "realtek_amebapro2_v0_example"))
 SRC_DIR = os.path.join(PROJECT_DIR, "src", "mmfv2_video_example")
 GCC_RELEASE_DIR = os.path.join(PROJECT_DIR, "GCC-RELEASE")
@@ -58,6 +59,7 @@ SRC_FILE = os.path.join(SRC_DIR, "video_example_media_framework.c")
 def run(cmd, cwd=None):
     print(f"Running: {cmd}")
     result = subprocess.run(cmd, shell=True, text=True, capture_output=True, check=True, cwd=cwd)
+
     print(result.stdout)
     if result.stderr:
         print(result.stderr, file=sys.stderr)
@@ -101,8 +103,9 @@ def build_example(example):
     # Copy built binary file to output directory
     built_bin_name = "flash_ntz.nn.bin" if "nn" in example.lower() else "flash_ntz.bin"
     built_bin_path = os.path.join(build_dir, built_bin_name)
-    output_bin_path = os.path.join(BIN_OUTPUT_DIR, f"{example}.bin")
-    os.makedirs(BIN_OUTPUT_DIR, exist_ok=True)
+    output_example_dir = os.path.join(BIN_OUTPUT_DIR, f"{example}")
+    output_bin_path = os.path.join(output_example_dir, built_bin_name)
+    os.makedirs(output_example_dir, exist_ok=True)
     shutil.copyfile(built_bin_path, output_bin_path)
     print(f"Saving built binary to: {output_bin_path}")
     
