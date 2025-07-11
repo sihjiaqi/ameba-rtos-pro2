@@ -5,9 +5,9 @@
 name: Build Peripheral Examples
 
 on:
-  push:
-    branches:
-      - 'update-github-actions'
+  # push:
+  #   branches:
+  #     - 'main'
   #   paths:
   #   - '.github/workflows/CI-compile-peripheral-examples.yml'
   #   - '.github/scripts/python/compile-peripheral-examples.py'
