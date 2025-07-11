@@ -103,7 +103,8 @@ def build_example(example):
     # Copy built binary file to output directory
     built_bin_name = "flash_ntz.nn.bin" if "nn" in example.lower() else "flash_ntz.bin"
     built_bin_path = os.path.join(build_dir, built_bin_name)
-    output_bin_path = os.path.join(BIN_OUTPUT_DIR, f"{example}.bin")
+    output_bin_path = os.path.join(BIN_OUTPUT_DIR, f"{example}", built_bin_name)
+    # output_bin_path = os.path.join(BIN_OUTPUT_DIR, f"{example}.bin")
     os.makedirs(BIN_OUTPUT_DIR, exist_ok=True)
     shutil.copyfile(built_bin_path, output_bin_path)
     print(f"Saving built binary to: {output_bin_path}")
