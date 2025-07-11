@@ -5,9 +5,9 @@
 name: Build Component Examples
 
 on:
-  # push:
-  #   branches:
-  #     - 'main'
+  push:
+    branches:
+      - 'update-github-actions'
   #   paths:
   #     - '.github/workflows/CI-compile-component-examples.yml'
   #     - '.github/scripts/python/compile-component-examples.py'
@@ -116,4 +116,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: component-example-${{ matrix.os }}-${{ matrix.batch.id }}
-          path: project/realtek_amebapro2_v0_example/bin_outputs/*.bin
+          path: project/realtek_amebapro2_v0_example/bin_outputs/**
