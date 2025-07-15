@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import subprocess
 import sys
+import platform
 import argparse
 
 def main():
     parser = argparse.ArgumentParser(description="Flash Ameba firmware and check logs for faults.")
-    parser.add_argument('--image_exe', required=True, help='Path to image_windows.exe')
+    parser.add_argument('--image_exe', required=True, help='Path to image executable')
     parser.add_argument('--tools_path', required=True, help='Path to tools folder')
     parser.add_argument('--com_port', required=True, help='COM port')
     parser.add_argument('--board', required=True, help='Board name')
@@ -19,12 +20,33 @@ def main():
         'Enable',
         'Disable',
         '2000000',
-        'uartfwburn.exe',
-        'Auto_Flash_Pro2_V3.3_win.exe',
+    ]
+
+    system_name = platform.system().lower()
+    if system_name == 'windows':
+        cmd.extend([
+            'uartfwburn.exe',
+            'Auto_Flash_Pro2_V3.3_win.exe'
+        ])
+    elif system_name == 'darwin':
+        cmd.extend([
+            'uartfwburn.darwin',
+            'Auto_Flash_Pro2_V3.3_macos.exe'
+        ])
+    elif system_name == 'linux':
+        cmd.extend([
+            'uartfwburn.linux',
+            'Auto_Flash_Pro2_V3.3_linux.exe'
+        ])
+    else:
+        raise RuntimeError(f"Unsupported OS: {system_name}")
+
+    # Append the remaining args
+    cmd.extend([
         '0x60000',
         '0x460000',
         '0x530000'
-    ]
+    ])
 
     print(f"Running: {' '.join(cmd)}")
 

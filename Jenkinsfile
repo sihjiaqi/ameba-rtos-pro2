@@ -25,6 +25,33 @@ pipeline {
       }
     }
 
+    stage ('Setup OS Paths') {
+      steps {
+        script {
+          def toolsFolder = ""
+          def imageExe = ""
+          if (isUnix()) {
+            def unameOut = sh(script: 'uname', returnStdout: true).trim()
+            if (unameOut == "Darwin") {
+              echo "Detected macOS"
+              toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_macos"
+              imageExe    = "${toolsFolder}/image_macos"
+            } else {
+              echo "Detected Linux"
+              toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_linux"
+              imageExe    = "${toolsFolder}/image_linux"
+            }
+          } else {
+            echo "Detected Windows"
+            toolsFolder = "${env.WORKSPACE}\\unzipped_artifacts\\ameba_pro2_tools_windows"
+            imageExe    = "${toolsFolder}\\image_windows.exe"
+          }
+          env.TOOLS_FOLDER = toolsFolder
+          env.IMAGE_EXE = imageExe
+        }
+      }
+    }
+
     stage('Download Firmware Artifacts') {
       steps {
         script {
@@ -40,7 +67,7 @@ pipeline {
           def parsed = readJSON text: artifactsJson // Parse the JSON response to a Groovy object
           def artifacts = parsed.artifacts // Extract the artifacts array
 
-          // Download the artifact with the specified batch ID
+          // Download artifact with the specified batch ID
           for (artifact in artifacts) {
             if (artifact.name.contains(params.BATCH_ID)) {
               found = true
@@ -68,82 +95,26 @@ pipeline {
       }
     }
 
-    stage('Prepare Arduino Tools') {
+    stage('Prepare Flash Tools') {
       steps {
         script {
-          def toolsFolder = "${env.WORKSPACE}\\unzipped_artifacts\\ameba_pro2_tools_linux"
-          def imageToolFolder = "${toolsFolder}\\image_tool"
-          def imageLinuxFile = "${toolsFolder}\\image_linux"
+          def toolsSource = "ameba-arduino-pro2-dev\\Arduino_package\\ameba_pro2_tools_windows"
 
-          // Check if folder and file exist
-          def imageToolExists = fileExists(imageToolFolder)
-          def imageLinuxExists = fileExists(imageLinuxFile)
-
-          if (!imageToolExists || !imageLinuxExists) {
-            echo "Required Arduino tools missing, downloading dev branch ZIP..."
-
-            // Download entire dev branch ZIP and extract
-            bat '''
-              curl -L -o dev.zip https://github.com/Ameba-AIoT/ameba-arduino-pro2/archive/refs/heads/dev.zip
-              tar -xf dev.zip
-            '''
-
-            def source = "ameba-arduino-pro2-dev\\Arduino_package\\ameba_pro2_tools_linux"
-            def target = toolsFolder
-
-            // Create target folder if missing
-            bat "mkdir ${target}"
-
-            // Copy only the tools folder content
-            powershell """
-              Copy-Item -Recurse -Force '${source}\\*' '${target}\\'
-            """
-
-            echo "Arduino tools copied to ${target}"
-
-          } else {
-            echo "Arduino tools already present, skipping download."
-          }
+          // Download and extract entire dev branch zip
+          bat '''
+            curl -L -o dev.zip https://github.com/Ameba-AIoT/ameba-arduino-pro2/archive/refs/heads/dev.zip
+            tar -xf dev.zip
+          '''
+          // Create target tools folder if missing
+          bat "mkdir ${TOOLS_FOLDER}"
+          // Copy only the tools folder content
+          powershell """
+            Copy-Item -Recurse -Force '${toolsSource}\\*' '${TOOLS_FOLDER}\\'
+          """
+          echo "Build tools copied to ${TOOLS_FOLDER}"
         }
       }
     }
-
-    // stage('Prepare Arduino Tools') {
-    //   steps {
-    //     script {
-    //       def toolsFolder = "${env.WORKSPACE}\\unzipped_artifacts\\ameba_pro2_tools_linux"
-    //       def imageToolFolder = "${toolsFolder}\\image_tool"
-    //       def imageLinuxFile = "${toolsFolder}\\image_linux"
-
-    //       // Check if folder and file exist
-    //       def imageToolExists = fileExists(imageToolFolder)
-    //       def imageLinuxExists = fileExists(imageLinuxFile)
-
-    //       if (!imageToolExists || !imageLinuxExists) {
-    //         echo "Required Arduino tools missing, cloning repo and copying files..."
-
-    //         // Clone repo
-    //         bat 'rmdir /S /Q ameba-arduino-pro2 || echo "No folder to delete"'
-    //         bat '''
-    //         where git
-    //         git --version
-    //         git clone https://github.com/Ameba-AIoT/ameba-arduino-pro2.git
-    //         '''
-
-    //         // Create target folders
-    //         bat "mkdir ${imageToolFolder}"
-
-    //         // Copy folder and file to unzipped_artifacts folder
-    //         powershell """
-    //           Copy-Item -Recurse -Force ameba-arduino-pro2/Arduino_package/ameba_pro2_tools_linux/image_tool/* '${imageToolFolder}\\'
-    //           Copy-Item -Force ameba-arduino-pro2/Arduino_package/ameba_pro2_tools_linux/image_linux '${toolsFolder}\\'
-    //         """
-    //       } else {
-    //         echo "Arduino tools already present, skipping clone."
-    //       }
-    //     }
-    //   }
-    // }
 
     stage('Flash to Hardware') {
       when {
@@ -153,32 +124,28 @@ pipeline {
         lock(resource: 'test-board', quantity: 1) {
           script {
             // Detect COM port on Windows
-            def comPort = bat(returnStdout: true, script: 'powershell -Command "Get-WmiObject Win32_SerialPort | Select-Object -ExpandProperty DeviceID"').trim()
-            echo "Detected COM port: ${comPort}"
-
-            def board = "Ameba_AMB82-MINI"
-            def toolsPath = ""
-            def imageExePath = ""
-            def artifactName = env.ARTIFACT_NAME ?: ""
-            if (artifactName.toLowerCase().contains("ubuntu")) {
-                toolsPath = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_linux"
-                imageExePath = "${toolsPath}/image_linux.exe"
-            } else if (artifactName.toLowerCase().contains("macos")) {
-                toolsPath = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_macos"
-                imageExePath = "${toolsPath}/image_macos.exe"
-            } else if (artifactName.toLowerCase().contains("windows")) {
-                toolsPath = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_windows"
-                imageExePath = "${toolsPath}/image_windows.exe"
-            } else {
-                error("Unknown artifact name: cannot determine OS tools to use.")
+            def comPorts = powershell(returnStdout: true, script: '''
+            Get-PnpDevice -Class "Ports" | Where-Object { $_.FriendlyName -match "COM" } | ForEach-Object {
+              if ($_ -match "\\(COM[0-9]+\\)") {
+                $matches[0] -replace "[()]", ""
+              }
             }
+            ''').trim().split('\n')
 
+            // def comPort = comPorts[0].trim()  // pick first COM port only
+            def comPort = "COM3"
+            echo "Detected COM port: ${comPort}"
+            def userNameRaw = bat(script: 'echo %USERNAME%', returnStdout: true).trim()
+            def userName = userNameRaw.split('\n')[-1].trim()
+            echo "Agent user: ${userName}"
+            def pythonExe = "C:\\Users\\${userName}\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+            
             bat """
-            python flash_firmware.py ^
-                --image_exe "${imageExePath}" ^
-                --tools_path "${toolsPath}" ^
+              ${pythonExe} scripts\\flash_firmware.py ^
+                --image_exe "${IMAGE_EXE}" ^
+                --tools_path "${TOOLS_FOLDER}" ^
                 --com_port "${comPort}" ^
-                --board "${board}"
+                --board "Ameba_AMB82-MINI"
             """
           }
         }
