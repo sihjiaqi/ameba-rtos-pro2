@@ -150,7 +150,7 @@ pipeline {
         expression { params.RUN_ID && params.BATCH_ID }
       }
       steps {
-        lock(label: 'test-board', quantity: 1) {
+        lock(resource: 'test-board', quantity: 1) {
           script {
             // Detect COM port on Windows
             def comPort = bat(returnStdout: true, script: 'powershell -Command "Get-WmiObject Win32_SerialPort | Select-Object -ExpandProperty DeviceID"').trim()
