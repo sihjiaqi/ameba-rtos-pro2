@@ -27,15 +27,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-all-examples:
+  build-video-examples:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         batch:
           - id: batch1
-            examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init mmf2_video_example_v3_init"
-
+            examples: "mmf2_video_example_v1_init mmf2_video_example_v2_init mmf2_video_example_v3_init mmf2_video_example_v1_snapshot_init mmf2_video_example_simo_init mmf2_video_example_av_init mmf2_video_example_av2_init mmf2_video_example_av21_init mmf2_video_example_av_mp4_init"
           - id: batch2
             examples: "mmf2_video_example_av_rtsp_mp4_init mmf2_video_example_joint_test_init mmf2_video_example_joint_test_rtsp_mp4_init mmf2_video_example_2way_audio_pcmu_doorbell_init mmf2_video_example_2way_audio_pcmu_init mmf2_video_example_array_rtsp_init mmf2_video_example_v1_param_change_init mmf2_video_example_v1_day_night_change_init mmf2_video_example_v1_mask_init"
           - id: batch3
@@ -46,8 +45,7 @@ jobs:
             examples: "mmf2_video_example_vipnn_handgesture_init mmf2_video_example_joint_test_vipnn_rtsp_mp4_init mmf2_video_example_vipnn_classify_rtsp_init mmf2_video_example_timelapse_mp4_init"
 
     steps:
-      # Checkout the repository into a shorter subdirectory to control 
-      # the folder depth and help avoid Windows path length issues
+      # Checkout the repository into a shorter subdirectory to avoid Windows path length issues
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -61,6 +59,7 @@ jobs:
           mkdir C:\r
           Copy-Item -Path "$env:GITHUB_WORKSPACE\rtos\*" -Destination "C:\r" -Recurse -Force
           echo "GITHUB_WORKSPACE=C:\r" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          echo "SOURCE_ROOT=C:/r" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Set source path
         shell: bash
@@ -124,9 +123,6 @@ jobs:
 
           cd /c/r
 
-          rm -rf build
-          mkdir build
-
           for example in ${{ matrix.batch.examples }}; do
             echo "Building: $example"
             python3 -u ${{ env.SOURCE_ROOT }}/.github/scripts/python/compile-video-examples.py $example
@@ -134,15 +130,6 @@ jobs:
 
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
-
-      # To access output binaries outside msys shell
-      - name: Copy output binaries to workspace
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          mkdir -p "${GITHUB_WORKSPACE}/rtos/project/realtek_amebapro2_v0_example/bin_outputs"
-          cp -rv /c/r/rtos/project/realtek_amebapro2_v0_example/bin_outputs/* \
-            "${GITHUB_WORKSPACE}/rtos/project/realtek_amebapro2_v0_example/bin_outputs/" || true
 
       # Upload binaries to GitHub Artifacts
       - name: Upload binaries (${{ matrix.os }})
