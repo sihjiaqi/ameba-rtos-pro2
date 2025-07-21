@@ -26,6 +26,18 @@ pipeline {
       }
     }
 
+    stage('Clean Workspace') {
+      steps {
+        cleanWs()
+      }
+    }
+    
+    stage('Checkout RTOS Repo') {
+      steps {
+        checkout scm
+      }
+    }
+
     stage('Setup Tools Folder') {
       steps {
         script {
@@ -177,6 +189,7 @@ pipeline {
           script {
             def comPort = ""
             def pythonExe = ""
+            def scriptPath = ""
             // Find serial port for Linux or macOS
             if (isUnix()) {
               echo "Detecting serial port..."
@@ -192,9 +205,9 @@ pipeline {
               comPort = serialList[0].trim()
               echo "Detected serial port: ${comPort}"
               pythonExe = "python3"
-
+              scriptPath = "${env.WORKSPACE}/scripts/flash_firmware.py"
               sh """
-                ${pythonExe} scripts/flash_firmware.py \
+                ${pythonExe} ${scriptPath} \
                   --image_exe "${IMAGE_EXE}" \
                   --tools_path "${TOOLS_FOLDER}" \
                   --com_port "${comPort}" \
@@ -220,9 +233,9 @@ pipeline {
               echo "Agent user: ${userName}"
 
               pythonExe = "C:\\Users\\${userName}\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
-
+              scriptPath = "${env.WORKSPACE}\\scripts\\flash_firmware.py"
               bat """
-                ${pythonExe} scripts\\flash_firmware.py ^
+                ${pythonExe} ${scriptPath} ^
                   --image_exe "${IMAGE_EXE}" ^
                   --tools_path "${TOOLS_FOLDER}" ^
                   --com_port "${comPort}" ^
