@@ -229,7 +229,9 @@ pipeline {
                   --tools_path "${TOOLS_FOLDER}" \
                   --com_port "${comPort}" \
                   --board "${board}"
+                  > flash_log.txt 2>&1
               """
+              sh "cat flash_log.txt"
             } 
             // Windows
             else {
@@ -256,14 +258,16 @@ pipeline {
                   --image_exe "${IMAGE_EXE}" ^
                   --tools_path "${TOOLS_FOLDER}" ^
                   --com_port "${comPort}" ^
-                  --board "${board}"
+                  --board "${board}" > flash_log.txt 2>&1
               """
+              bat "type flash_log.txt"
             }
           }
         }
       }
       post {
         always {
+          archiveArtifacts artifacts: 'flash_log.txt', allowEmptyArchive: true
           echo "Job done for batch ${params.BATCH_ID}"
         }
       }
