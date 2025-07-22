@@ -111,8 +111,8 @@ def build_example(example):
         output_bin_path
     )
     
-    # Copy firmware.bin and firmware_isp_iq.bin to output directory
-    for firmware_file in ["firmware.bin", "firmware_isp_iq.bin"]:
+    # Copy bin files to output directory
+    for firmware_file in ["firmware.bin", "firmware_isp_iq.bin", "system_files.bin"]:
         firmware_path = os.path.join(build_dir, firmware_file)
         if os.path.isfile(firmware_path):
             shutil.copyfile(

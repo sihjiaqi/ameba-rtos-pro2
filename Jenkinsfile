@@ -31,7 +31,7 @@ pipeline {
         cleanWs()
       }
     }
-    
+
     stage('Checkout RTOS Repo') {
       steps {
         checkout scm
@@ -49,19 +49,19 @@ pipeline {
             def unameOut = sh(script: 'uname', returnStdout: true).trim()
             if (unameOut == "Darwin") {
               echo "Detected macOS"
-              toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_macos"
               toolsSource = "ameba-arduino-pro2-dev/Arduino_package/ameba_pro2_tools_macos"
+              toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_macos"
               imageExe    = "${toolsFolder}/image_macos"
             } else {
               echo "Detected Linux"
-              toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_linux"
               toolsSource = "ameba-arduino-pro2-dev/Arduino_package/ameba_pro2_tools_linux"
+              toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_linux"
               imageExe    = "${toolsFolder}/image_linux"
             }
           } else {
             echo "Detected Windows"
-            toolsFolder = "${env.WORKSPACE}\\unzipped_artifacts\\ameba_pro2_tools_windows"
             toolsSource = "ameba-arduino-pro2-dev\\Arduino_package\\ameba_pro2_tools_windows"
+            toolsFolder = "${env.WORKSPACE}\\unzipped_artifacts\\ameba_pro2_tools_windows"
             imageExe    = "${toolsFolder}\\image_windows.exe"
           }
           env.TOOLS_SOURCE = toolsSource
@@ -167,15 +167,32 @@ pipeline {
 
           // Create the target tools folder then copy the extracted platform-specific tools into that folder
           if (isUnix()) {
+            // Create tools folder if it doesn't exist
             sh "mkdir -p ${TOOLS_FOLDER}"
+            // Copy platform-specific tools
             sh "cp -r ${TOOLS_SOURCE}/* ${TOOLS_FOLDER}/"
+            // Copy any .bin files from nested artifact dirs to tools folder
+            sh "find artifact_files/${ARTIFACT_NAME} -name '*.bin' -exec cp {} ${TOOLS_FOLDER}/ \\;"
+            // Copy system_files.bin to tools folder
+            sh "cp '${env.WORKSPACE}/tools/Pro2_PG_tool _v1.4.3/system_files.bin' ${TOOLS_FOLDER}/ || true"
           } else {
+            // Create tools folder if it doesn't exist
             bat "mkdir ${TOOLS_FOLDER}"
+            // Copy platform-specific tools
             powershell """
               Copy-Item -Recurse -Force '${TOOLS_SOURCE}\\*' '${TOOLS_FOLDER}\\'
             """
+            // Copy .bin files from nested dirs to tools folder
+            powershell """
+              Get-ChildItem -Recurse 'artifact_files\\${env.ARTIFACT_NAME}\\' -Filter '*.bin' |
+              Copy-Item -Destination '${TOOLS_FOLDER}\\' -Force
+            """
+            // Copy system_files.bin to tools folder
+            powershell """
+              Copy-Item -Force '${env.WORKSPACE}\\tools\\Pro2_PG_tool _v1.4.3\\system_files.bin' '${TOOLS_FOLDER}\\' -ErrorAction SilentlyContinue
+            """
           }
-          echo "Build tools copied to ${TOOLS_FOLDER}"
+          echo "Build tools and .bin files copied to ${TOOLS_FOLDER}"
         }
       }
     }
