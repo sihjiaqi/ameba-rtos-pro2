@@ -3,6 +3,8 @@ import subprocess
 import sys
 import platform
 import argparse
+import serial
+import time
 
 def main():
     parser = argparse.ArgumentParser(description="Flash Ameba firmware and check logs for faults.")
@@ -10,6 +12,7 @@ def main():
     parser.add_argument('--tools_path', required=True, help='Path to tools folder')
     parser.add_argument('--com_port', required=True, help='COM port')
     parser.add_argument('--board', required=True, help='Board name')
+    parser.add_argument('--baud_rate', default=115200, type=int, help='Baud rate for serial monitor (default: 115200)')
     args = parser.parse_args()
 
     cmd = [
@@ -41,7 +44,6 @@ def main():
     else:
         raise RuntimeError(f"Unsupported OS: {system_name}")
 
-    # Append the remaining args
     cmd.extend([
         '0x60000',
         '0x460000',
@@ -67,17 +69,34 @@ def main():
     print(output)
     print("--- Flashing log end ---")
 
-    # If the command returned non-zero, fail immediately
     if result.returncode != 0:
         print(f"Flashing tool returned non-zero exit code: {result.returncode}")
         sys.exit(result.returncode)
 
-    # If the log contains a hard fault marker, fail too
     if "Bus Fault" in output or "bus fault" in output.lower():
         print("Detected HardFault in flashing log. Marking as failure.")
         sys.exit(1)
 
     print("Flashing completed successfully with no hard fault detected.")
+
+    # === Start serial monitor ===
+    print(f"Opening serial port {args.com_port} at {args.baud_rate} baud...")
+    try:
+        ser = serial.Serial(args.com_port, args.baud_rate, timeout=1)
+        time.sleep(2)  # Give MCU time to reset after flash
+        print("--- Serial monitor --- (Press CTRL+C to stop)")
+
+        while True:
+            line = ser.readline().decode('utf-8', errors='ignore').strip()
+            if line:
+                print(line)
+
+    except KeyboardInterrupt:
+        print("\nSerial monitor stopped by user.")
+
+    except serial.SerialException as e:
+        print(f"Serial error: {e}")
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
