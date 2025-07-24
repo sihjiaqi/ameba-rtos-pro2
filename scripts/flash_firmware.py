@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import subprocess
-import sys
 import platform
 import argparse
 import serial
 import time
+import sys
 
 def main():
     parser = argparse.ArgumentParser(description="Flash Ameba firmware and check logs for faults.")
