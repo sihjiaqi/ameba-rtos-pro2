@@ -100,16 +100,24 @@ def build_example(example):
     target = "flash_nn" if "nn" in example.lower() else "flash"
     run(f'cmake --build . --target {target} -j4', cwd=build_dir)
     
+    print(f"Contents of build directory {build_dir}:")
+    print(os.listdir(build_dir))
+
     # Copy built binary file to output directory
     built_bin_name = "flash_ntz.nn.bin" if "nn" in example.lower() else "flash_ntz.bin"
     built_bin_path = os.path.join(build_dir, built_bin_name)
     output_bin_dir = os.path.join(BIN_OUTPUT_DIR, f"{example}")
     output_bin_path = os.path.join(output_bin_dir, built_bin_name)
     os.makedirs(output_bin_dir, exist_ok=True)
-    shutil.copyfile(
-        built_bin_path, 
-        output_bin_path
-    )
+    # shutil.copyfile(
+    #     built_bin_path, 
+    #     output_bin_path
+    # )
+    if os.path.isfile(built_bin_path):
+        shutil.copyfile(built_bin_path, output_bin_path)
+        print(f"Copied {built_bin_name} to {output_bin_dir}")
+    else:
+        print(f"ERROR: Expected binary file not found: {built_bin_path}")
     
     # Copy bin files to output directory
     for firmware_file in ["firmware.bin", "firmware_isp_iq.bin", "system_files.bin"]:
