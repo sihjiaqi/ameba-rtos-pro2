@@ -132,6 +132,11 @@ jobs:
 
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
+        
+      - name: Debug output folder
+        run: |
+          echo "SOURCE_ROOT: $SOURCE_ROOT"
+          ls -R $SOURCE_ROOT/project/realtek_amebapro2_v0_example/bin_outputs
 
       # Upload binaries to GitHub Artifacts
       - name: Upload binaries (${{ matrix.os }})

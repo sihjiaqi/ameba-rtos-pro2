@@ -8,7 +8,7 @@ EXAMPLES = [
     "mmf2_video_example_v1_init",
     "mmf2_video_example_v2_init",
     "mmf2_video_example_v3_init",
-    "mmf2_video_example_v1_shapshot_init",
+    "mmf2_video_example_v1_snapshot_init",
     "mmf2_video_example_simo_init",
     "mmf2_video_example_av_init",
     "mmf2_video_example_av2_init",
