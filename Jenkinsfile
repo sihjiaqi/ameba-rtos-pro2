@@ -2,39 +2,53 @@ pipeline {
   agent { label 'windows-agent' }
 
   parameters {
-    string(name: 'RUN_ID', defaultValue: '', description: 'GitHub Actions run ID')
-    string(name: 'BATCH_ID', defaultValue: '', description: 'Batch ID for each run')
+    string(name: 'GERRIT_PROJECT', defaultValue: '', description: 'Gerrit project name (from Gerrit Trigger)')
+    string(name: 'GERRIT_BRANCH', defaultValue: 'main', description: 'Branch to build (from Gerrit Trigger)')
   }
 
   environment {
-    GITHUB_OWNER = 'sihjiaqi'
-    GITHUB_REPO  = 'ameba-rtos-pro2'
-    GITHUB_TOKEN = credentials('GITHUB_TOKEN')  // Store GitHub PAT in Jenkins Credentials
+    GERRIT_CREDENTIAL_ID = 'gerrit-ssh-key-credential-id'
     BOARD = 'Ameba_AMB82-MINI'
   }
 
   stages {
-    stage('Test GitHub Token') {
-      steps {
-        script {
-          if (GITHUB_TOKEN) {
-            echo "Length of token: ${GITHUB_TOKEN.length()}"
-          } else {
-            echo "GITHUB_TOKEN is not defined!"
-          }
-        }
-      }
-    }
-
     stage('Clean Workspace') {
       steps {
         cleanWs()
       }
     }
 
-    stage('Checkout RTOS Repo') {
+    stage('Checkout RTOS Repo from Gerrit') {
       steps {
-        checkout scm
+        checkout([$class: 'GitSCM',
+          branches: [[name: "${params.GERRIT_BRANCH}"]],
+          doGenerateSubmoduleConfigurations: false,
+          extensions: [],
+          userRemoteConfigs: [[
+            url: "ssh://sihjiaqi@sgcn3sd3-git.rtkbf.com:29418/${params.GERRIT_PROJECT}",
+            credentialsId: "${env.GERRIT_CREDENTIAL_ID}"
+          ]]
+        ])
+      }
+    }
+
+    stage('Checkout Arduino Tools Repo') {
+      steps {
+        dir('ameba-arduino-pro2-forked') {
+          checkout([$class: 'GitSCM',
+            branches: [[name: "main"]],
+            userRemoteConfigs: [[
+              url: "ssh://sihjiaqi@sgcn3sd3-git.rtkbf.com:29418/ameba-arduino-pro2-forked",
+              credentialsId: "${env.GERRIT_CREDENTIAL_ID}"
+            ]]
+          ])
+        }
+      }
+    }
+
+    stage('Pull LFS binaries') {
+      steps {
+        sh 'git lfs pull'
       }
     }
 
@@ -45,106 +59,28 @@ pipeline {
           def imageExe = ""
           def toolsSource = ""
 
+          echo "Detected OS: ${isUnix() ? 'Unix-like' : 'Windows'}"
+
           if (isUnix()) {
-            def unameOut = sh(script: 'uname', returnStdout: true).trim()
-            if (unameOut == "Darwin") {
-              echo "Detected macOS"
-              toolsSource = "ameba-arduino-pro2-dev/Arduino_package/ameba_pro2_tools_macos"
-              toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_macos"
-              imageExe    = "${toolsFolder}/image_macos"
-            } else {
-              echo "Detected Linux"
-              toolsSource = "ameba-arduino-pro2-dev/Arduino_package/ameba_pro2_tools_linux"
-              toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_linux"
-              imageExe    = "${toolsFolder}/image_linux"
-            }
+            toolsSource = "ameba-arduino-pro2-forked/Arduino_package/ameba_pro2_tools_linux"
+            toolsFolder = "${env.WORKSPACE}/unzipped_artifacts/ameba_pro2_tools_linux"
+            imageExe    = "${toolsFolder}/image_linux"
+            sh "mkdir -p ${toolsFolder}"
+            sh "cp -r ${toolsSource}/* ${toolsFolder}/"
           } else {
-            echo "Detected Windows"
-            toolsSource = "ameba-arduino-pro2-dev\\Arduino_package\\ameba_pro2_tools_windows"
+            toolsSource = "ameba-arduino-pro2-forked\\Arduino_package\\ameba_pro2_tools_windows"
             toolsFolder = "${env.WORKSPACE}\\unzipped_artifacts\\ameba_pro2_tools_windows"
             imageExe    = "${toolsFolder}\\image_windows.exe"
+            bat "mkdir ${toolsFolder}"
+            powershell """
+              Copy-Item -Recurse -Force '${toolsSource}\\*' '${toolsFolder}\\'
+            """
           }
-          env.TOOLS_SOURCE = toolsSource
+
           env.TOOLS_FOLDER = toolsFolder
           env.IMAGE_EXE = imageExe
-        }
-      }
-    }
 
-    stage('Download Firmware Artifacts') {
-      steps {
-        script {
-          echo "Run ID: ${params.RUN_ID} | Batch ID: ${params.BATCH_ID}"
-
-          // Unix version
-          if (isUnix()) {  
-            sh """
-            curl -s -H "Authorization: token ${GITHUB_TOKEN}" \\
-              https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/runs/${params.RUN_ID}/artifacts \\
-              > artifacts.json
-            """
-
-            def artifactsJson = readFile('artifacts.json').trim()
-            def parsed = readJSON text: artifactsJson
-            def artifacts = parsed.artifacts
-
-            for (artifact in artifacts) {
-              if (artifact.name.contains(params.BATCH_ID)) {
-                echo "Downloading artifact: ${artifact.name} (ID: ${artifact.id})"
-                env.ARTIFACT_NAME = artifact.name
-
-                try {
-                  sh """
-                  mkdir -p artifact_files/${artifact.name}
-                  curl -L -H "Authorization: token ${GITHUB_TOKEN}" \\
-                    -o ${artifact.name}.zip \\
-                    https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/artifacts/${artifact.id}/zip
-                  unzip -o ${artifact.name}.zip -d artifact_files/${artifact.name}
-                  rm ${artifact.name}.zip
-                  """
-                } catch (err) {
-                  echo "Failed to download artifact ${artifact.name}: ${err}"
-                  error("Artifact download failed.")
-                }
-              }
-            }
-
-          } 
-          // Windows version
-          else {
-            bat """
-            curl -s -H "Authorization: token ${GITHUB_TOKEN}" ^
-              https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/runs/${params.RUN_ID}/artifacts ^
-              > artifacts.json
-            """
-
-            def artifactsJson = readFile('artifacts.json').trim()
-            def parsed = readJSON text: artifactsJson
-            def artifacts = parsed.artifacts
-
-            for (artifact in artifacts) {
-              if (artifact.name.contains(params.BATCH_ID)) {
-                echo "Downloading artifact: ${artifact.name} (ID: ${artifact.id})"
-                env.ARTIFACT_NAME = artifact.name
-
-                try {
-                  bat """
-                  mkdir artifact_files\\${artifact.name}
-
-                  curl -L -H "Authorization: token ${GITHUB_TOKEN}" ^
-                    -o ${artifact.name}.zip ^
-                    https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/artifacts/${artifact.id}/zip
-
-                  powershell -Command "Expand-Archive -Path '${artifact.name}.zip' -DestinationPath 'artifact_files/${artifact.name}' -Force"
-                  del ${artifact.name}.zip
-                  """
-                } catch (err) {
-                  echo "Failed to download artifact ${artifact.name}: ${err}"
-                  error("Artifact download failed.")
-                }
-              }
-            }
-          }
+          echo "Tools prepared in: ${toolsFolder}"
         }
       }
     }
@@ -152,47 +88,13 @@ pipeline {
     stage('Prepare Flash Tools') {
       steps {
         script {
-          // Download and extract the entire dev branch zip
           if (isUnix()) {
-            sh '''
-              curl -L -o dev.zip https://github.com/Ameba-AIoT/ameba-arduino-pro2/archive/refs/heads/dev.zip
-              unzip -o dev.zip
-            '''
-          } else {
-            bat '''
-              curl -L -o dev.zip https://github.com/Ameba-AIoT/ameba-arduino-pro2/archive/refs/heads/dev.zip
-              tar -xf dev.zip
-            '''
-          }
-
-          // Create the target tools folder then copy the extracted platform-specific tools into that folder
-          if (isUnix()) {
-            // Create tools folder if it doesn't exist
             sh "mkdir -p ${TOOLS_FOLDER}"
-            // Copy platform-specific tools
-            sh "cp -r ${TOOLS_SOURCE}/* ${TOOLS_FOLDER}/"
-            // Copy any .bin files from nested artifact dirs to tools folder
-            sh "find artifact_files/${ARTIFACT_NAME} -name '*.bin' -exec cp {} ${TOOLS_FOLDER}/ \\;"
-            // Copy system_files.bin to tools folder
-            sh "cp '${env.WORKSPACE}/tools/Pro2_PG_tool _v1.4.3/system_files.bin' ${TOOLS_FOLDER}/ || true"
+            sh "cp -r arduino-tools-repo/Arduino_package/ameba_pro2_tools_linux/* ${TOOLS_FOLDER}/"
           } else {
-            // Create tools folder if it doesn't exist
             bat "mkdir ${TOOLS_FOLDER}"
-            // Copy platform-specific tools
-            powershell """
-              Copy-Item -Recurse -Force '${TOOLS_SOURCE}\\*' '${TOOLS_FOLDER}\\'
-            """
-            // Copy .bin files from nested dirs to tools folder
-            powershell """
-              Get-ChildItem -Recurse 'artifact_files\\${env.ARTIFACT_NAME}\\' -Filter '*.bin' |
-              Copy-Item -Destination '${TOOLS_FOLDER}\\' -Force
-            """
-            // Copy system_files.bin to tools folder
-            powershell """
-              Copy-Item -Force '${env.WORKSPACE}\\tools\\Pro2_PG_tool _v1.4.3\\system_files.bin' '${TOOLS_FOLDER}\\' -ErrorAction SilentlyContinue
-            """
+            bat "xcopy arduino-tools-repo\\Arduino_package\\ameba_pro2_tools_windows\\* ${TOOLS_FOLDER}\\ /E /I /Y"
           }
-          echo "Build tools and .bin files copied to ${TOOLS_FOLDER}"
         }
       }
     }
