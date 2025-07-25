@@ -153,7 +153,8 @@ jobs:
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
 
-      - name: Track .bin files with LFS
+      - name: Git LFS track and add
+        working-directory: rtos
         run: |
           git lfs track "*.bin"
           git add .gitattributes
