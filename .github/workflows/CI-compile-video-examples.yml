@@ -164,6 +164,7 @@ jobs:
       - name: Add Gerrit remote & force push
         env:
           GERRIT_SSH: 'ssh://sihjiaqi@sgcn3sd3-git.rtkbf.com:29418/ameba-rtos-pro2-forked'
+        working-directory: rtos
         run: |
           git remote add gerrit $GERRIT_SSH
           git push --force gerrit HEAD:refs/heads/dev-jenkins || echo "No changes to push"
