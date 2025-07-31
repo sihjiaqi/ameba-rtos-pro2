@@ -46,6 +46,7 @@ pipeline {
       }
     }
 
+    // Pulls firmware binaries from LFS to the workspace
     stage('Pull LFS binaries') {
       steps {
         sh 'git lfs pull'

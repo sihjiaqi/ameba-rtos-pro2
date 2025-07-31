@@ -6,8 +6,8 @@ name: Build Video/NN Examples
 
 on:
   push:
-   branches:
-     - "dev-gerrit"
+    branches:
+      - "dev-gerrit"
   #   paths:
   #   - '.github/workflows/CI-compile-video-examples.yml'
   #   - '.github/scripts/python/compile-video-examples.py'
@@ -28,10 +28,10 @@ on:
 
 jobs:
   build-video-examples:
-    # runs-on: ${{ matrix.os }}
-    runs-on: [self-hosted]
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [self-hosted]
         # os: [ubuntu-latest, macos-latest, windows-latest]
         batch:
           - id: batch1
@@ -48,33 +48,30 @@ jobs:
 
     steps:
       # Checkout the repository into a shorter subdirectory to avoid Windows path length issues
-      - name: Checkout RTOS repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           path: rtos
-      
-      - name: Checkout Arduino tools repository (ameba-arduino-pro2)
-        uses: actions/checkout@v4
-        with:
-          repository: Ameba-AIoT/ameba-arduino-pro2
-          path: a
-
+          
       - name: Install Git LFS (Linux/macOS)
-        if: runner.os == 'Linux' || runner.os == 'macOS'
+        if: runner.os != 'Windows'
         run: |
           sudo apt-get update
           sudo apt-get install git-lfs -y
           git lfs install
-        
+
       - name: Install Git LFS (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: powershell
         run: |
-          choco install git-lfs -y
+          if (-not (git lfs version)) {
+            Write-Error "Git LFS not installed or not in PATH. Please install Git LFS manually on the self-hosted runner."
+            exit 1
+          }
           git lfs install
 
       # Avoid Windows path length limit
-      - name: Move to short path
+      - name: Move to short path (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -83,14 +80,9 @@ jobs:
           echo "GITHUB_WORKSPACE=C:\r" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           echo "SOURCE_ROOT=C:/r" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Set source path
-        shell: bash
-        run: |
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            echo "SOURCE_ROOT=C:/r" >> $GITHUB_ENV
-          else
-            echo "SOURCE_ROOT=rtos" >> $GITHUB_ENV
-          fi
+      - name: Set source path (non-Windows)
+        if: runner.os != 'Windows'
+        run: echo "SOURCE_ROOT=rtos" >> $GITHUB_ENV
 
       - name: Bootstrap Linux Environment
         if: runner.os == 'Linux'
@@ -153,23 +145,28 @@ jobs:
       - name: Build complete
         run: echo "Build finished. All examples in the batch have been processed."
 
-      - name: Git LFS track and add
+      - name: Set Git author identity
         working-directory: rtos
+        shell: powershell
         run: |
-          git lfs track "*.bin"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Git LFS track and commit binaries
+        working-directory: rtos
+        shell: powershell
+        run: |
+          git lfs track "project/realtek_amebapro2_v0_example/bin_outputs/**/*.bin"
           git add .gitattributes
-          git add bin_outputs/*.bin || echo "No .bin files to add"
-          git commit -m "Track binary files with LFS" || echo "No changes to commit"
+          git add project/realtek_amebapro2_v0_example/bin_outputs
+          git commit -m "Update binary artifacts" -ErrorAction SilentlyContinue
 
-      - name: Add Gerrit remote & force push
-        env:
-          GERRIT_SSH: 'ssh://sihjiaqi@sgcn3sd3-git.rtkbf.com:29418/ameba-rtos-pro2-forked'
+      - name: Create dev-bin-artifacts branch and push binaries
         working-directory: rtos
+        shell: powershell
         run: |
-          git remote remove gerrit || true
-          git remote add gerrit $GERRIT_SSH
-          git push --force gerrit HEAD:refs/heads/dev-gerrit || echo "No changes to push"
-
-      - name: Git LFS Push
-        run: |
-          git lfs push gerrit refs/heads/dev-gerrit
+          git checkout -B dev-bin-artifacts
+          git remote remove gerrit -ErrorAction SilentlyContinue
+          git remote add gerrit ssh://sihjiaqi@sgcn3sd3-git.rtkbf.com:29418/ameba-rtos-pro2-forked
+          git push --force gerrit HEAD:refs/heads/dev-bin-artifacts
+          git lfs push gerrit refs/heads/dev-bin-artifacts
